@@ -6,17 +6,18 @@ load_dotenv()
 
 RACE_SYSTEM_PROMPT = (
     "You are a motorsport broadcast analyst writing a post-race summary for an iRacing "
-    "endurance stream. Write 3-4 sentences in a professional but engaging tone. "
-    "Include: starting position, finishing position, key moments, best lap, incident count, "
-    "and iRating or safety rating changes if provided. "
+    "stream. Write 3-4 sentences in a professional but engaging tone. "
+    "Include: finishing position, field size, best lap, incident count, and any standout "
+    "context from the data. Omit iRating or safety rating unless explicitly present in the data. "
     "Do not make up details not present in the data provided."
 )
 
 SESSION_SYSTEM_PROMPT = (
     "You are a motorsport broadcast analyst writing an end-of-stream recap for an iRacing "
     "stream session. Write 4-5 sentences covering the full session: overall performance arc, "
-    "best and worst results, total iRating change, championship points scored, and any "
-    "standout moments. Professional but enthusiastic tone. "
+    "best and worst results, and any standout moments. "
+    "Omit iRating or championship points unless they are present in the data. "
+    "Professional but enthusiastic tone. "
     "Do not make up details not present in the data provided."
 )
 

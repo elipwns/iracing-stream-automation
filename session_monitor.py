@@ -102,6 +102,7 @@ def monitor_loop(dry_run: bool):
     prev_process_running = None
     pipeline_fired      = False
     iracing_was_connected = False
+    current_session_type  = ""
 
     sd.reset()
     telemetry_server.start()
@@ -138,6 +139,7 @@ def monitor_loop(dry_run: bool):
                 on_track_changed_at     = None
                 prev_flag_event         = None
                 pipeline_fired          = False
+                current_session_type    = ""
 
             time.sleep(POLL_INTERVAL)
             continue
@@ -152,6 +154,13 @@ def monitor_loop(dry_run: bool):
         flags        = ir["SessionFlags"] or 0
         on_track_raw = bool(ir["IsOnTrack"])
 
+        # Keep session type current so scene decisions have it before the pipeline block runs
+        _si = ir["SessionInfo"] or {}
+        _sessions = _si.get("Sessions") or []
+        _snum = ir["SessionNum"] or 0
+        if _sessions and _snum < len(_sessions):
+            current_session_type = _sessions[_snum].get("SessionType", "")
+
         # Debounce IsOnTrack — only commit change after it holds for DEBOUNCE_SECS
         now = time.monotonic()
         if on_track_raw != raw_on_track:
@@ -165,6 +174,10 @@ def monitor_loop(dry_run: bool):
 
         if state != prev_state or on_track != prev_on_track:
             scene, event = _target_scene_and_event(state, on_track)
+            # Only show End Screen after a Race; qualify/practice → Pit/Garage
+            if scene == SCENE_END_SCREEN and current_session_type != "Race":
+                scene = SCENE_PIT
+                event = "idle"
             print(f"[monitor] State: {prev_state}→{state}  on_track={on_track}  scene={scene!r}")
             _switch(scene, event, dry_run)
             prev_state      = state
@@ -187,17 +200,18 @@ def monitor_loop(dry_run: bool):
 
         if state in (5, 6) and not pipeline_fired:
             pipeline_fired = True
-            session_info = ir["SessionInfo"] or {}
-            sessions_info = session_info.get("Sessions") or []
-            session_num = ir["SessionNum"] or 0
-            session_type = sessions_info[session_num].get("SessionType", "") if sessions_info else ""
-            subsession_id = sessions_info[-1].get("SubsessionID") if sessions_info else None
+            session_info_raw = ir["SessionInfo"] or {}
+            sessions_list    = session_info_raw.get("Sessions") or []
+            session_num      = ir["SessionNum"] or 0
+            session_type     = sessions_list[session_num].get("SessionType", "") if sessions_list else ""
+            current_session_type = session_type
 
             if session_type == "Race":
-                print(f"[monitor] Race ended — launching results pipeline (subsession={subsession_id})")
+                print("[monitor] Race ended — launching results pipeline")
+                session_snapshot = dict(session_info_raw)
                 threading.Thread(
                     target=results_pipeline.run,
-                    kwargs={"subsession_id": subsession_id, "dry_run": dry_run},
+                    kwargs={"session_info": session_snapshot, "session_num": session_num, "dry_run": dry_run},
                     daemon=True,
                 ).start()
             else:

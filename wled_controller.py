@@ -13,11 +13,11 @@ EFFECT_SOLID = 0
 EVENTS = {
     "idle":        {"seg": [{"col": [[80, 80, 80]], "fx": EFFECT_SOLID}], "bri": 60,  "on": True},
     # flags — ordered by severity
-    "black_flag":  {"seg": [{"col": [[180, 0, 0]],  "fx": EFFECT_BREATHE, "sx": 220}], "bri": 255, "on": True},
-    "meatball":    {"seg": [{"col": [[255, 100, 0]], "fx": EFFECT_BREATHE, "sx": 160}], "bri": 220, "on": True},
-    "caution":     {"seg": [{"col": [[255, 200, 0]], "fx": EFFECT_BREATHE, "sx": 150}], "bri": 255, "on": True},
-    "green_flag":  {"seg": [{"col": [[0, 255, 80]],  "fx": EFFECT_BREATHE, "sx": 80}],  "bri": 220, "on": True},
-    "white_flag":  {"seg": [{"col": [[255, 255, 255]], "fx": EFFECT_SOLID}], "bri": 130, "on": True},
+    "black_flag":  {"seg": [{"col": [[180, 0, 0]],  "fx": EFFECT_BREATHE, "sx": 220}], "bri": 160, "on": True},
+    "meatball":    {"seg": [{"col": [[255, 100, 0]], "fx": EFFECT_BREATHE, "sx": 160}], "bri": 140, "on": True},
+    "caution":     {"seg": [{"col": [[255, 200, 0]], "fx": EFFECT_BREATHE, "sx": 150}], "bri": 160, "on": True},
+    "green_flag":  {"seg": [{"col": [[0, 255, 80]],  "fx": EFFECT_BREATHE, "sx": 80}],  "bri": 140, "on": True},
+    "white_flag":  {"seg": [{"col": [[255, 255, 255]], "fx": EFFECT_SOLID}], "bri": 100, "on": True},
     # session states
     "checkered":   {"seg": [{"col": [[220, 230, 255]], "fx": EFFECT_BREATHE, "sx": 40}], "bri": 160, "on": True},
     "race_end":    {"seg": [{"col": [[0, 220, 80]],   "fx": EFFECT_SOLID}], "bri": 200, "on": True},
