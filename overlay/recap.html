@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Stream Recap</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0c0f;
+      --surface: #12161c;
+      --border: #1e2530;
+      --accent: #00aaff;
+      --text: #e8edf2;
+      --text-muted: #6b7a8d;
+      --green: #00d26a;
+      --red: #ff5252;
+      --gold: #f5c842;
+    }
+
+    body {
+      background: transparent;
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Left panel — recap content */
+    .panel {
+      width: 560px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      background: rgba(10, 12, 15, 0.92);
+      border-right: 2px solid var(--accent);
+      height: 100vh;
+    }
+
+    /* Right side — fully transparent, game capture shows through */
+    .game-area {
+      flex: 1;
+      /* intentionally empty */
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .header-eyebrow {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .header-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    .body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding: 16px 20px;
+      gap: 14px;
+    }
+
+    /* Top summary row */
+    .summary-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .total-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .total-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .total-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .total-value.positive { color: var(--green); }
+    .total-value.negative { color: var(--red); }
+    .total-value.neutral  { color: var(--text); }
+    .total-value.accent   { color: var(--accent); }
+    .total-value.gold     { color: var(--gold); }
+
+    /* Per-discipline cards */
+    .category-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+    }
+
+    .category-name {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .category-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .cat-stat-label {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .cat-stat-value {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    /* Race cards */
+    .races-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .race-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: grid;
+      grid-template-columns: 48px 1fr auto auto auto auto auto;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .race-pos {
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .race-pos.p1 { color: var(--gold); }
+    .race-pos.p2 { color: #b0bec5; }
+    .race-pos.p3 { color: #cd7f32; }
+    .race-pos.other { color: var(--text); }
+
+    .race-info { min-width: 0; }
+
+    .race-track {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .race-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .race-stat {
+      text-align: center;
+      min-width: 64px;
+    }
+
+    .race-stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+    }
+
+    .race-stat-value {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+
+    .pending-badge {
+      font-size: 10px;
+      background: var(--border);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 2px 8px;
+      letter-spacing: 1px;
+    }
+
+    /* Narrative panel */
+    .narrative {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+
+    .narrative-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .narrative-text {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    .placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-text { font-size: 11px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div class="panel">
+
+<header>
+  <div class="header-eyebrow">Session Recap</div>
+  <div class="header-title">Stream Summary</div>
+  <div class="header-date" id="header-date"></div>
+</header>
+
+<div class="body">
+
+  <div class="summary-row">
+    <div class="total-card">
+      <div class="total-label">Races</div>
+      <div class="total-value neutral" id="total-races">—</div>
+    </div>
+    <div class="total-card">
+      <div class="total-label">Best Finish</div>
+      <div class="total-value gold" id="total-best">—</div>
+    </div>
+    <div class="total-card">
+      <div class="total-label">Champ Points</div>
+      <div class="total-value accent" id="total-pts">—</div>
+    </div>
+  </div>
+
+  <div id="categories"></div>
+
+  <div class="races-section" id="races-section">
+    <div class="narrative">
+      <div class="narrative-text placeholder">No races this session yet.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-text">iRacing Stream Automation</div>
+  <div class="footer-text" id="footer-status">Waiting for data...</div>
+</footer>
+
+</div><!-- end .panel -->
+<div class="game-area"></div>
+
+<script>
+  function signClass(val) {
+    if (val === null || val === undefined) return '';
+    return val > 0 ? 'positive' : val < 0 ? 'negative' : '';
+  }
+
+  function posClass(pos) {
+    if (pos === 1) return 'p1';
+    if (pos === 2) return 'p2';
+    if (pos === 3) return 'p3';
+    return 'other';
+  }
+
+  function signStr(val, decimals = 0) {
+    if (val === null || val === undefined) return '—';
+    const n = decimals > 0 ? val.toFixed(decimals) : val;
+    return val > 0 ? `+${n}` : `${n}`;
+  }
+
+  function render(data) {
+    const t = data.totals || {};
+
+    document.getElementById('header-date').textContent = data.stream_date || '';
+    document.getElementById('total-races').textContent = t.races_completed ?? '—';
+    document.getElementById('total-best').textContent  = t.best_finish ? `P${t.best_finish}` : '—';
+    document.getElementById('total-pts').textContent   = t.total_champ_points ?? '—';
+
+    const byCategory = t.by_category || {};
+    const catEl = document.getElementById('categories');
+    catEl.innerHTML = Object.entries(byCategory).map(([name, stats]) => {
+      const ir = stats.iracing_net;
+      const sr = stats.safety_rating_net;
+      return `<div class="category-card">
+        <div class="category-name">${name}</div>
+        <div class="category-stats">
+          <div>
+            <div class="cat-stat-label">iRating</div>
+            <div class="cat-stat-value ${signClass(ir)}">${signStr(ir)}</div>
+          </div>
+          <div>
+            <div class="cat-stat-label">Safety Rating</div>
+            <div class="cat-stat-value ${signClass(sr)}">${signStr(sr, 2)}</div>
+          </div>
+          <div>
+            <div class="cat-stat-label">Races</div>
+            <div class="cat-stat-value">${stats.races}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const section = document.getElementById('races-section');
+    const races = data.races || [];
+
+    let html = '';
+
+    if (data.session_narrative) {
+      html += `<div class="narrative">
+        <div class="narrative-label">Session Narrative</div>
+        <div class="narrative-text">${data.session_narrative}</div>
+      </div>`;
+    }
+
+    for (const r of races) {
+      const pos = r.finish_position;
+      const irChg = r.iracing_change;
+      const srChg = r.safety_rating_change;
+      const pending = !r.official;
+
+      html += `<div class="race-card">
+        <div class="race-pos ${posClass(pos)}">${pos ? 'P' + pos : '—'}</div>
+        <div class="race-info">
+          <div class="race-track">${r.track || 'Unknown Track'}</div>
+          <div class="race-meta">${r.category ? r.category + ' · ' : ''}${r.series_name || ''}${r.laps ? ' · ' + r.laps + ' laps' : ''}${r.total_drivers ? ' · ' + r.total_drivers + ' drivers' : ''}</div>
+        </div>
+        <div class="race-stat">
+          <div class="race-stat-label">iRating</div>
+          <div class="race-stat-value ${signClass(irChg)}">${pending ? '—' : signStr(irChg)}</div>
+        </div>
+        <div class="race-stat">
+          <div class="race-stat-label">SR</div>
+          <div class="race-stat-value ${signClass(srChg)}">${pending ? '—' : signStr(srChg, 2)}</div>
+        </div>
+        <div class="race-stat">
+          <div class="race-stat-label">Points</div>
+          <div class="race-stat-value">${r.champ_points ?? '—'}</div>
+        </div>
+        <div class="race-stat">
+          <div class="race-stat-label">Inc</div>
+          <div class="race-stat-value ${r.incidents > 0 ? 'negative' : ''}">${r.incidents ?? '—'}x</div>
+        </div>
+        ${pending ? '<span class="pending-badge">PENDING</span>' : ''}
+      </div>`;
+    }
+
+    if (!html) {
+      html = `<div class="narrative"><div class="narrative-text placeholder">No races this session yet.</div></div>`;
+    }
+
+    section.innerHTML = html;
+    document.getElementById('footer-status').textContent = `${races.length} race${races.length !== 1 ? 's' : ''} · updated ${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('session_data.json?' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        render(data);
+      }
+    } catch {}
+    setTimeout(poll, 8000);
+  }
+
+  poll();
+</script>
+</body>
+</html>

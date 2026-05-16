@@ -1,0 +1,17 @@
+# credentials
+.env
+
+# virtual environments
+.venv/
+.venv-win/
+venv/
+env/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+
+# runtime overlay data (generated at race time)
+overlay/results.json
+overlay/session_data.json

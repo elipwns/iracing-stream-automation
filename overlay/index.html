@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Race Results</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-label">Post-Race</div>
+    <div class="header-title">Race Results</div>
+  </div>
+</header>
+
+<main>
+  <div class="narrative-panel">
+    <div class="panel-label">Race Summary</div>
+    <div id="narrative" class="narrative-text">
+      <span class="placeholder-text">Awaiting race results...</span>
+    </div>
+    <div class="stats-grid" id="stats-grid" style="display:none;">
+      <div class="stat-card">
+        <div class="stat-label">Start</div>
+        <div class="stat-value" id="stat-start">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Finish</div>
+        <div class="stat-value accent" id="stat-finish">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Best Lap</div>
+        <div class="stat-value" id="stat-best-lap">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Incidents</div>
+        <div class="stat-value" id="stat-incidents">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="results-panel">
+    <div class="results-header panel-label">Classification</div>
+    <div class="results-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Pos</th>
+            <th>#</th>
+            <th>Driver</th>
+            <th>Laps</th>
+            <th>Inc</th>
+            <th>Best Lap</th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr>
+            <td colspan="6" class="loading">No data — race not completed</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-text" id="footer-session">iRacing Stream Automation</div>
+  <div class="footer-text" id="footer-time"></div>
+</footer>
+
+<script>
+  function posClass(pos) {
+    if (pos === 1) return 'pos-1';
+    if (pos === 2) return 'pos-2';
+    if (pos === 3) return 'pos-3';
+    return '';
+  }
+
+  function render(data) {
+    const narrative = document.getElementById('narrative');
+    narrative.textContent = data.narrative || '';
+
+    const statsGrid = document.getElementById('stats-grid');
+    const myResult = data.results && data.results.find(r => r.cust_id == data.my_cust_id);
+
+    if (myResult) {
+      statsGrid.style.display = 'grid';
+      document.getElementById('stat-start').textContent = 'P' + myResult.start_position;
+      document.getElementById('stat-finish').textContent = 'P' + myResult.finish_position;
+      document.getElementById('stat-best-lap').textContent = myResult.best_lap_display || '—';
+      document.getElementById('stat-incidents').textContent = myResult.incidents;
+    }
+
+    const tbody = document.getElementById('results-body');
+    if (!data.results || data.results.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="loading">No results available</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.results.map(r => {
+      const isMine = r.cust_id == data.my_cust_id;
+      return `<tr class="${isMine ? 'my-car' : ''}">
+        <td class="pos ${posClass(r.finish_position)}">${r.finish_position}</td>
+        <td class="car-number">${r.car_number}</td>
+        <td class="driver-name">${r.display_name}</td>
+        <td>${r.laps_complete}</td>
+        <td class="incidents ${r.incidents > 0 ? 'nonzero' : ''}">${r.incidents}x</td>
+        <td class="lap-time">${r.best_lap_display || '—'}</td>
+      </tr>`;
+    }).join('');
+
+    if (data.subsession_id) {
+      document.getElementById('footer-session').textContent = `Session #${data.subsession_id}`;
+    }
+  }
+
+  function updateClock() {
+    document.getElementById('footer-time').textContent =
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function loadResults() {
+    try {
+      const res = await fetch('results.json?' + Date.now());
+      if (!res.ok) return;
+      const data = await res.json();
+      render(data);
+    } catch {
+      // results.json not present yet — placeholder stays visible
+    }
+  }
+
+  let resultsLoaded = false;
+
+  async function pollResults() {
+    try {
+      const res = await fetch('results.json?' + Date.now());
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        render(data);
+        resultsLoaded = true;
+      }
+    } catch {
+      // not ready yet
+    }
+  }
+
+  async function poll() {
+    await pollResults();
+    if (!resultsLoaded) setTimeout(poll, 5000);
+  }
+
+  poll();
+  updateClock();
+  setInterval(updateClock, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Relative Timing</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    color: #e8e8e8;
+    width: 280px;
+  }
+
+  #strip {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 28px 1fr 64px;
+    align-items: center;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 3px;
+    background: rgba(10, 10, 10, 0.78);
+    transition: background 0.2s;
+  }
+
+  .row.player {
+    background: rgba(255, 200, 0, 0.22);
+    border-left: 3px solid #ffc800;
+  }
+
+  .row.ahead { opacity: 0.9; }
+  .row.behind { opacity: 0.75; }
+
+  .pos {
+    font-size: 11px;
+    color: #999;
+    text-align: center;
+  }
+
+  .name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    font-weight: 500;
+  }
+
+  .gap {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ccc;
+  }
+
+  .row.player .gap { color: #ffc800; }
+
+  /* class colour dots */
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .name-wrap {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  #disconnected {
+    display: none;
+    color: #666;
+    font-size: 12px;
+    padding: 8px 10px;
+    background: rgba(10,10,10,0.7);
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div id="disconnected">Waiting for telemetry…</div>
+<div id="strip"></div>
+
+<script>
+const WS_URL   = 'ws://localhost:8765';
+const GAP_WINDOW = 45; // seconds each side
+
+// class_id → colour (iRacing prototype class IDs vary by series; these are common)
+const CLASS_COLORS = {
+  0:    '#aaaaaa',
+  4005: '#ff4444',   // GT3
+  4006: '#ff9900',   // LMP2 / prototype
+  4007: '#4488ff',   // GTE / GT4
+};
+
+function classColor(id) {
+  return CLASS_COLORS[id] ?? `hsl(${(id * 73) % 360}, 70%, 55%)`;
+}
+
+function firstName(full) {
+  const parts = full.trim().split(' ');
+  return parts.length > 1 ? parts[0][0] + '. ' + parts.slice(1).join(' ') : full;
+}
+
+const strip = document.getElementById('strip');
+const disco = document.getElementById('disconnected');
+
+function render(data) {
+  if (!data || !data.connected) {
+    strip.innerHTML = '';
+    disco.style.display = 'block';
+    return;
+  }
+  disco.style.display = 'none';
+
+  const cars = data.cars || [];
+  // Filter to ±GAP_WINDOW seconds, keep player always
+  const visible = cars.filter(c =>
+    c.is_player || (c.gap_secs !== null && Math.abs(c.gap_secs) <= GAP_WINDOW)
+  );
+
+  // Sort by gap (ascending = ahead first: most negative first)
+  visible.sort((a, b) => (a.gap_secs ?? 0) - (b.gap_secs ?? 0));
+
+  strip.innerHTML = '';
+  for (const car of visible) {
+    const row = document.createElement('div');
+    row.className = 'row' + (car.is_player ? ' player' : car.gap_secs < 0 ? ' ahead' : ' behind');
+
+    const pos = document.createElement('div');
+    pos.className = 'pos';
+    pos.textContent = car.position > 0 ? `P${car.position}` : '';
+
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'name-wrap';
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = classColor(car.class_id);
+
+    const name = document.createElement('div');
+    name.className = 'name';
+    name.textContent = firstName(car.name);
+
+    nameWrap.appendChild(dot);
+    nameWrap.appendChild(name);
+
+    const gap = document.createElement('div');
+    gap.className = 'gap';
+    gap.textContent = car.is_player ? 'YOU' : car.gap_str;
+
+    row.appendChild(pos);
+    row.appendChild(nameWrap);
+    row.appendChild(gap);
+    strip.appendChild(row);
+  }
+}
+
+let ws;
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.onmessage = e => render(JSON.parse(e.data));
+  ws.onclose   = () => { disco.style.display = 'block'; setTimeout(connect, 3000); };
+  ws.onerror   = () => ws.close();
+}
+connect();
+</script>
+</body>
+</html>

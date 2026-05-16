@@ -1,0 +1,8 @@
+iracingdataapi
+pyirsdk
+obsws-python
+anthropic
+python-dotenv
+requests
+psutil
+websockets
