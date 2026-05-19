@@ -12,9 +12,21 @@ Automates OBS scene switching, WLED ambient lighting, real-time telemetry overla
 | On track, racing | In Car - Racing | Idle (flags override) |
 | Checkered flag, still on track | In Car - Racing | Slow white breathe |
 | Race finished, off track | End Screen | Solid green |
-| Green / white / caution / black / meatball flag | — | Corresponding colour |
+| Green / white / caution / local yellow / debris / black / meatball flag | — | Corresponding colour |
 
 After each race: Claude writes a post-race narrative and the end screen overlay populates with results. At stream end, type `end` for a full-session recap overlay.
+
+**WLED flag colours:**
+
+| Flag | Colour | Notes |
+|---|---|---|
+| Full course caution | Yellow breathe (slow) | Full course yellow / waving |
+| Local yellow | Yellow breathe (fast) | Sector only — common on long tracks like Nürburgring |
+| Debris | Orange breathe | Red/yellow striped flag |
+| Green | Green breathe | Start / restart |
+| White | White solid | Last lap |
+| Black | Red breathe | Personal penalty |
+| Meatball | Orange breathe | Damage / service allowed |
 
 ---
 
@@ -42,14 +54,13 @@ Open `.env` and set:
 
 ```
 IRACING_CUST_ID=123456          # your iRacing customer ID (found on your profile page)
+IRACING_CLIENT_ID=              # see Known Limitations below
 ANTHROPIC_API_KEY=sk-ant-...    # from console.anthropic.com
 OBS_HOST=localhost
 OBS_PORT=4455
 OBS_PASSWORD=yourpassword       # set in OBS > Tools > WebSocket Server Settings
 WLED_IP=192.168.1.xxx           # your WLED device's local IP
 ```
-
-> `IRACING_USERNAME` and `IRACING_PASSWORD` are in the file but currently unused — iRacing changed their API auth in Dec 2025. See [Known Limitations](#known-limitations).
 
 ### 2. Create the Windows virtual environment
 
@@ -129,32 +140,54 @@ All overlays are plain HTML files served as OBS browser sources. They poll local
 
 ---
 
+## In Progress / TODO
+
+### Twitch chat bot + betting system
+
+`betting.py` and `chat_bot.py` are implemented but need Twitch credentials to activate.
+
+**Setup (when ready):**
+1. Create a separate Twitch bot account
+2. Log into that account and get a token at `https://twitchapps.com/tmi/`
+3. Add to `.env`: `TWITCH_TOKEN=oauth:...` and `TWITCH_CHANNEL=yourchannel`
+4. `pip install -r requirements.txt` in `.venv-win`
+5. Run alongside the monitor: `.venv-win\Scripts\python chat_bot.py`
+
+**Commands:** `!bet [win/podium/finish/crash] [amount or all]` · `!points` · `!bets` · `!leaderboard`
+
+**Odds:** 3x pre-race → 2x lap 1 → 1.5x lap 3 → 1.2x lap 5 → closed at lap 8
+
+---
+
 ## Known Limitations
 
 ### iRacing API auth (as of Dec 2025)
 
-iRacing discontinued username/password API authentication. The `iracingdataapi` library is waiting on iRacing to issue OAuth tokens.
+iRacing moved to OAuth 2.0 (`oauth.iracing.com`). The auth flow is implemented in `iracing_auth.py` — on first run it opens a browser for one-time login, then caches tokens locally (7-day refresh window). No password is stored.
 
-**Current behaviour:** Race results still appear on the end screen (sourced from live irsdk data), and Claude still writes a narrative. The following are unavailable until the API is restored:
+**Blocker:** iRacing's OAuth client registration is currently paused. You need a `client_id` before any of this works. Email `auth@iracing.com` to get on the list.
+
+**Current behaviour:** Race results still appear on the end screen (sourced from live irsdk data), and Claude still writes a narrative. The following are unavailable until a `client_id` is obtained:
 - iRating and safety rating change numbers
 - Championship points
 - Official vs unofficial race flag
-
-**When it's fixed:** Update the library (`pip install -U iracingdataapi` in `.venv-win`) and restore `results_pipeline.py` from git history — the full API-backed version is one commit back. Track progress at [iracingdataapi issue #65](https://github.com/jasondilworth56/iracingdataapi/issues/65).
 
 ---
 
 ## Project Structure
 
 ```
-session_monitor.py      # main loop — iRacing state → OBS + WLED
+session_monitor.py      # main loop — iRacing state → OBS + WLED + betting hooks
 telemetry_server.py     # WebSocket server broadcasting live telemetry at 10Hz
 wled_controller.py      # WLED HTTP API wrapper + event definitions
 obs_controller.py       # OBS WebSocket wrapper
-iracing_api.py          # iRacing data API wrapper (currently unused — see above)
-results_pipeline.py     # post-race results extraction + Claude narrative
+iracing_api.py          # iRacing data API wrapper (blocked on OAuth client_id)
+iracing_auth.py         # iRacing OAuth 2.0 flow (browser login + token cache)
+results_pipeline.py     # post-race results extraction + Claude narrative + bet resolution
 claude_summary.py       # Claude API calls for race narrative and session recap
 session_data.py         # session_data.json read/write helpers
+betting.py              # points economy, bet logic, SQLite storage, chat message queue
+chat_bot.py             # Twitch chat bot (needs TWITCH_TOKEN — see TODO above)
 overlay/
   index.html            # end screen race results
   recap.html            # full-session recap

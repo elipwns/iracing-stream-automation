@@ -33,3 +33,9 @@ def get_current_scene() -> str:
 
 def set_text_source(source_name: str, text: str):
     _get_client().set_input_settings(source_name, {"text": text}, overlay=True)
+
+
+def get_media_state(source_name: str) -> str:
+    """Returns the OBS media state string for a media input source."""
+    resp = _get_client().get_media_input_status(source_name)
+    return resp.media_state

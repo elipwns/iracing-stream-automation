@@ -91,9 +91,9 @@ pip install -r requirements.txt
 ### 2. Create your `.env` file
 
 ```env
-# iRacing credentials
-IRACING_USERNAME=your@email.com
-IRACING_PASSWORD=yourpassword
+# iRacing
+IRACING_CUST_ID=123456
+IRACING_CLIENT_ID=              # email auth@iracing.com — registration currently paused
 
 # Anthropic
 ANTHROPIC_API_KEY=sk-ant-...

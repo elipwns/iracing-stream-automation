@@ -1,13 +1,6 @@
-# TODO — iRacing API restoration
-# iRacing killed username/password auth in Dec 2025. iracingdataapi (v1.4.4) has not yet
-# migrated to OAuth. Track: https://github.com/jasondilworth56/iracingdataapi/issues/65
-#
-# When the library ships OAuth support:
-#   1. pip install -U iracingdataapi  (both .venv and .venv-win)
-#   2. Uncomment the iracing_api import below
-#   3. Replace run() with the full version from git history (commit before this one)
-#      - Restores: iRating/SR changes, champ points, official flag, 30-min polling loop
-#   4. Update session_monitor.py: pass subsession_id instead of session_info/session_num
+# TODO — restore iRacing API enrichment once IRACING_CLIENT_ID is obtained (auth@iracing.com)
+# Uncomment iracing_api import and restore run() from git history (one commit back) to re-enable:
+# iRating/SR changes, champ points, official flag, 30-min post-race polling
 
 import json
 import os
@@ -16,6 +9,7 @@ from dotenv import load_dotenv
 
 import claude_summary
 import session_data as sd
+import betting
 
 load_dotenv()
 
@@ -188,6 +182,7 @@ def run(session_info: dict | None = None, session_num: int = 0,
     print("[results_pipeline] Generating race narrative...")
     narrative = claude_summary.generate_summary(race_data)
     _write_results(race_data, narrative, cust_id, dry_run)
+    betting.resolve_bets(race_data)
 
     if not dry_run:
         sd.add_race(_build_session_entry(race_data, narrative, cust_id))

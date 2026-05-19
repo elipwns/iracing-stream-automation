@@ -6,3 +6,4 @@ python-dotenv
 requests
 psutil
 websockets
+twitchio>=2.6,<3

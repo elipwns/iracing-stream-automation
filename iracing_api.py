@@ -1,8 +1,7 @@
-import os
-from dotenv import load_dotenv
+import warnings
 from iracingdataapi.client import irDataClient
-
-load_dotenv()
+from iracingdataapi.exceptions import AccessTokenInvalid
+from iracing_auth import get_access_token
 
 _client = None
 
@@ -10,27 +9,38 @@ _client = None
 def _get_client():
     global _client
     if _client is None:
-        _client = irDataClient(
-            username=os.getenv("IRACING_USERNAME"),
-            password=os.getenv("IRACING_PASSWORD"),
-        )
+        _client = _new_client()
     return _client
 
 
+def _new_client() -> irDataClient:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        return irDataClient(access_token=get_access_token())
+
+
+def _call(fn, *args, **kwargs):
+    global _client
+    try:
+        return fn(*args, **kwargs)
+    except AccessTokenInvalid:
+        _client = _new_client()
+        return fn(*args, **kwargs)
+
+
 def get_last_session_results(cust_id: int) -> dict | None:
-    client = _get_client()
-    results = client.result_search_series(cust_id=cust_id, finish_range_begin=1)
+    results = _call(_get_client().result_search_series, cust_id=cust_id, finish_range_begin=1)
     if not results:
         return None
     return sorted(results, key=lambda r: r.get("start_time", ""), reverse=True)[0]
 
 
 def get_session_results(subsession_id: int) -> dict:
-    return _get_client().result(subsession_id=subsession_id)
+    return _call(_get_client().result, subsession_id=subsession_id)
 
 
 def get_lap_data(subsession_id: int, cust_id: int) -> list:
-    laps = _get_client().result_lap_data(subsession_id=subsession_id, cust_id=cust_id)
+    laps = _call(_get_client().result_lap_data, subsession_id=subsession_id, cust_id=cust_id)
     return laps or []
 
 

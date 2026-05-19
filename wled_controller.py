@@ -15,7 +15,9 @@ EVENTS = {
     # flags — ordered by severity
     "black_flag":  {"seg": [{"col": [[180, 0, 0]],  "fx": EFFECT_BREATHE, "sx": 220}], "bri": 160, "on": True},
     "meatball":    {"seg": [{"col": [[255, 100, 0]], "fx": EFFECT_BREATHE, "sx": 160}], "bri": 140, "on": True},
-    "caution":     {"seg": [{"col": [[255, 200, 0]], "fx": EFFECT_BREATHE, "sx": 150}], "bri": 160, "on": True},
+    "caution":     {"seg": [{"col": [[255, 200, 0]], "fx": EFFECT_BREATHE, "sx": 150}], "bri": 200, "on": True},
+    "local_yellow":{"seg": [{"col": [[255, 200, 0]], "fx": EFFECT_BREATHE, "sx": 220}], "bri": 160, "on": True},
+    "debris":      {"seg": [{"col": [[255, 80,  0]], "fx": EFFECT_BREATHE, "sx": 180}], "bri": 140, "on": True},
     "green_flag":  {"seg": [{"col": [[0, 255, 80]],  "fx": EFFECT_BREATHE, "sx": 80}],  "bri": 140, "on": True},
     "white_flag":  {"seg": [{"col": [[255, 255, 255]], "fx": EFFECT_SOLID}], "bri": 100, "on": True},
     # session states
