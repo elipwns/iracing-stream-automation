@@ -39,3 +39,7 @@ def get_media_state(source_name: str) -> str:
     """Returns the OBS media state string for a media input source."""
     resp = _get_client().get_media_input_status(source_name)
     return resp.media_state
+
+
+def stop_stream():
+    _get_client().stop_stream()

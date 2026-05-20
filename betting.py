@@ -86,6 +86,7 @@ def _multiplier_for_lap(lap: int) -> float | None:
 def open_betting(race_id: str):
     init_db()
     with _db() as conn:
+        conn.execute("DELETE FROM chat_queue WHERE sent=0")
         _set_state(conn, "race_id", race_id)
         _set_state(conn, "betting_open", "1")
         _set_state(conn, "current_multiplier", "3.0")

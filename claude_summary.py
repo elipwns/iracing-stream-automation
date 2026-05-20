@@ -5,11 +5,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 RACE_SYSTEM_PROMPT = (
-    "You are a motorsport broadcast analyst writing a post-race summary for an iRacing "
-    "stream. Write 3-4 sentences in a professional but engaging tone. "
-    "Include: finishing position, field size, best lap, incident count, and any standout "
-    "context from the data. Omit iRating or safety rating unless explicitly present in the data. "
-    "Do not make up details not present in the data provided."
+    "You are a motorsport broadcast analyst writing a post-race summary for an iRacing stream. "
+    "The streamer is the driver whose result is under 'my_finish', 'my_best_lap', 'my_incidents', 'my_laps_led'. "
+    "Write 3-4 sentences in a professional but engaging tone. "
+    "Use race_events to describe what happened during the race — flags like meatball (damage taken), "
+    "local yellows (chaotic sectors), and cautions tell the story of the race. "
+    "Also mention: finishing position out of field size, best lap, incident counts from the classification "
+    "(call them out if > 0), laps led if notable, and any retirements (status != 'Running'). "
+    "Do not mention official/unofficial status. Do not mention iRating or safety rating. "
+    "Do not invent details not present in the data."
 )
 
 SESSION_SYSTEM_PROMPT = (

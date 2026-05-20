@@ -19,12 +19,16 @@ load_dotenv()
 
 SCENE_MENU       = "Menu / Lobby"
 SCENE_RACING     = "In Car - Racing"
+SCENE_WIDE       = "Mega Wide"
 SCENE_PIT        = "Pit / Garage"
 SCENE_END_SCREEN = "End Screen"
 SCENE_STARTING   = "Starting Soon"
 SCENE_OUTRO      = "Stream Outro"
 
 POLL_INTERVAL = 1.0
+
+WIDE_SHOWCASE_DELAY    = 90   # seconds after race start before auto-switching to wide
+WIDE_SHOWCASE_DURATION = 60   # seconds to stay in wide before returning
 
 # iRacing SDK SessionFlags bit masks (from irsdk.Flags)
 FLAG_WHITE         = 0x0002     # white flag (last lap)
@@ -75,17 +79,18 @@ def _resolve_flag(flags: int) -> str | None:
 def _target_scene_and_event(state: int, on_track: bool) -> tuple[str, str]:
     if state in (5, 6):
         if on_track:
-            return SCENE_RACING, "checkered"
-        return SCENE_END_SCREEN, "race_end"
+            return (SCENE_WIDE if _wide_mode else SCENE_RACING), "checkered"
+        return SCENE_PIT, "idle"   # pipeline switches to End Screen once results are written
     if state in (1, 2, 3, 4):
         if on_track:
-            return SCENE_RACING, "idle"   # flags handle WLED while on track
+            return (SCENE_WIDE if _wide_mode else SCENE_RACING), "idle"
         return SCENE_PIT, "idle"
     return SCENE_MENU, "idle"
 
 
 _bot_process = None
 _wled_enabled = False
+_wide_mode    = False
 
 
 def _start_bot():
@@ -123,7 +128,11 @@ def _play_outro_and_exit(dry_run: bool):
             break
         time.sleep(1)
 
-    print("[monitor] Outro finished — shutting down")
+    print("[monitor] Outro finished — stopping stream")
+    try:
+        obs_controller.stop_stream()
+    except Exception as e:
+        print(f"[monitor] Could not stop stream: {e}")
     os._exit(0)
 
 
@@ -134,13 +143,23 @@ def _toggle_wled():
     print(f"[monitor] WLED {state}")
 
 
+def _toggle_wide(dry_run: bool):
+    global _wide_mode
+    _wide_mode = not _wide_mode
+    scene = SCENE_WIDE if _wide_mode else SCENE_RACING
+    print(f"[monitor] Wide mode {'ON' if _wide_mode else 'OFF'} — switching to {scene!r}")
+    _switch(scene, "idle", dry_run)
+
+
 def _command_listener(dry_run: bool):
-    print("[monitor] Commands: 'end' = outro  |  'wled' = toggle lights  |  'bot' = chat bot  |  'quit' = exit")
+    print("[monitor] Commands: 'end' = outro  |  'wide' = toggle wide view  |  'wled' = toggle lights  |  'bot' = chat bot  |  'quit' = exit")
     for line in sys.stdin:
         cmd = line.strip().lower()
         if cmd == "end":
             print("[monitor] Stream outro — switching scene...")
             _switch(SCENE_OUTRO, "idle", dry_run)
+        elif cmd == "wide":
+            _toggle_wide(dry_run)
         elif cmd == "wled":
             _toggle_wled()
         elif cmd == "bot":
@@ -149,7 +168,7 @@ def _command_listener(dry_run: bool):
             print("[monitor] Shutting down")
             os._exit(0)
         elif cmd:
-            print(f"[monitor] Unknown command: {cmd!r}  (try 'end', 'wled', 'bot', or 'quit')")
+            print(f"[monitor] Unknown command: {cmd!r}  (try 'end', 'wide', 'wled', 'bot', or 'quit')")
 
 
 def monitor_loop(dry_run: bool):
@@ -166,8 +185,13 @@ def monitor_loop(dry_run: bool):
     iracing_was_connected = False
     had_session         = False   # set when SDK connects; never reset — used for outro trigger
     current_session_type  = ""
-    betting_opened      = False
-    current_lap         = 0
+    betting_race_id      = ""
+    current_lap          = 0
+    flag_timeline        = []   # [{lap, flag}] recorded during the race
+    wide_showcase_fired  = False
+    wide_showcase_active = False
+    wide_showcase_start  = None
+    race_green_time      = None
 
     sd.reset()
     betting.init_db()
@@ -203,16 +227,21 @@ def monitor_loop(dry_run: bool):
                 prev_process_running = process_running
 
             if iracing_was_connected:
-                iracing_was_connected   = False
-                prev_state              = None
-                prev_on_track           = None
-                raw_on_track            = None
-                on_track_changed_at     = None
-                prev_flag_event         = None
-                pipeline_fired          = False
-                current_session_type    = ""
-                betting_opened          = False
-                current_lap             = 0
+                iracing_was_connected    = False
+                prev_state               = None
+                prev_on_track            = None
+                raw_on_track             = None
+                on_track_changed_at      = None
+                prev_flag_event          = None
+                pipeline_fired           = False
+                current_session_type     = ""
+                betting_race_id          = ""
+                current_lap              = 0
+                flag_timeline            = []
+                wide_showcase_fired      = False
+                wide_showcase_active     = False
+                wide_showcase_start      = None
+                race_green_time          = None
                 betting.close_betting()
 
             time.sleep(POLL_INTERVAL)
@@ -249,10 +278,6 @@ def monitor_loop(dry_run: bool):
 
         if state != prev_state or on_track != prev_on_track:
             scene, event = _target_scene_and_event(state, on_track)
-            # Only show End Screen after a Race; qualify/practice → Pit/Garage
-            if scene == SCENE_END_SCREEN and current_session_type != "Race":
-                scene = SCENE_PIT
-                event = "idle"
             print(f"[monitor] State: {prev_state}→{state}  on_track={on_track}  scene={scene!r}")
             _switch(scene, event, dry_run)
             prev_state      = state
@@ -260,8 +285,6 @@ def monitor_loop(dry_run: bool):
             prev_flag_event = None   # reset so flag detection re-fires after scene change
             if state not in (5, 6):
                 pipeline_fired = False
-                betting_opened = False
-                current_lap    = 0
 
         # Flag detection — only when actively on track in a live session
         if on_track and state in (1, 2, 3, 4):
@@ -269,6 +292,7 @@ def monitor_loop(dry_run: bool):
             if flag_event != prev_flag_event:
                 if flag_event:
                     print(f"[monitor] Flag: {flag_event}")
+                    flag_timeline.append({"lap": current_lap, "flag": flag_event})
                     if _wled_enabled and not dry_run:
                         wled_controller.set_event(flag_event)
                 else:
@@ -277,12 +301,41 @@ def monitor_loop(dry_run: bool):
                         wled_controller.set_event("idle")
                 prev_flag_event = flag_event
 
-        # Open betting when a race session goes live
-        if state in (1, 2, 3, 4) and current_session_type == "Race" and not betting_opened:
-            si = ir["SessionInfo"] or {}
-            race_id = str(si.get("WeekendInfo", {}).get("SubSessionID") or int(time.monotonic()))
-            betting.open_betting(race_id)
-            betting_opened = True
+        # Auto wide showcase — once per race, fires WIDE_SHOWCASE_DELAY seconds after race start
+        if (on_track and state in (1, 2, 3, 4) and current_session_type == "Race"
+                and race_green_time and not wide_showcase_fired and not _wide_mode):
+            if now - race_green_time >= WIDE_SHOWCASE_DELAY:
+                wide_showcase_fired  = True
+                wide_showcase_active = True
+                wide_showcase_start  = now
+                print(f"[monitor] Auto wide showcase — switching to {SCENE_WIDE!r} for {WIDE_SHOWCASE_DURATION}s")
+                _switch(SCENE_WIDE, "idle", dry_run)
+
+        if wide_showcase_active and now - wide_showcase_start >= WIDE_SHOWCASE_DURATION:
+            wide_showcase_active = False
+            if not _wide_mode:
+                print("[monitor] Auto wide showcase done — returning to normal")
+                _switch(SCENE_RACING if on_track else SCENE_PIT, "idle", dry_run)
+
+        # Open betting when a race session goes live — keyed by SubSessionID so it only fires once per race
+        if state in (1, 2, 3, 4) and current_session_type == "Race":
+            wi = ir["WeekendInfo"] or {}
+            sub_id = wi.get("SubSessionID")
+            if sub_id:
+                race_id = str(sub_id)
+            elif not betting_race_id:
+                race_id = f"local_{int(time.monotonic())}"  # generated once; stays stable after
+            else:
+                race_id = betting_race_id
+            if race_id != betting_race_id:
+                betting.open_betting(race_id)
+                betting_race_id      = race_id
+                current_lap          = 0
+                flag_timeline        = []
+                wide_showcase_fired  = False
+                wide_showcase_active = False
+                wide_showcase_start  = None
+                race_green_time      = time.monotonic()
 
         # Track lap count to drive odds changes
         if state in (1, 2, 3, 4) and current_session_type == "Race":
@@ -301,10 +354,12 @@ def monitor_loop(dry_run: bool):
 
             if session_type == "Race":
                 print("[monitor] Race ended — launching results pipeline")
-                session_snapshot = dict(session_info_raw)
+                def _on_results_ready():
+                    _switch(SCENE_END_SCREEN, "race_end", dry_run)
                 threading.Thread(
                     target=results_pipeline.run,
-                    kwargs={"session_info": session_snapshot, "session_num": session_num, "dry_run": dry_run},
+                    kwargs={"ir": ir, "session_num": session_num, "dry_run": dry_run,
+                            "on_complete": _on_results_ready, "flag_timeline": list(flag_timeline)},
                     daemon=True,
                 ).start()
             else:

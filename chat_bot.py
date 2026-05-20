@@ -5,15 +5,21 @@ from twitchio.ext import commands
 import betting
 
 load_dotenv()
-betting.init_db()
 
 CHANNEL = os.getenv("TWITCH_CHANNEL", "")
+TOKEN   = os.getenv("TWITCH_TOKEN", "")
+
+if not TOKEN or not CHANNEL:
+    print("[bot] TWITCH_TOKEN or TWITCH_CHANNEL not set in .env — bot not starting")
+    raise SystemExit(0)
+
+betting.init_db()
 
 
 class Bot(commands.Bot):
     def __init__(self):
         super().__init__(
-            token=os.getenv("TWITCH_TOKEN"),
+            token=TOKEN,
             prefix="!",
             initial_channels=[CHANNEL],
         )
