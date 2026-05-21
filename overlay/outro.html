@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stream Outro Overlay</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.3);
+      --accent-glow-strong: rgba(0, 229, 255, 0.6);
+      --text: #f0f4f8;
+      --text-muted: #8fa0b5;
+      
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Orbitron', monospace;
+    }
+
+    body {
+      background: #030508;
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Animated background */
+    .bg-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .bg-image {
+      width: 100%;
+      height: 100%;
+      background: url('assets/outro_bg.png') no-repeat center center;
+      background-size: cover;
+      filter: brightness(0.45) contrast(1.1);
+      animation: scale-bg 25s infinite ease-in-out;
+    }
+
+    @keyframes scale-bg {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.04); }
+    }
+
+    /* Cyber scanlines overlay */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.15) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Vignette to blend the borders of the video */
+    .dark-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, transparent 40%, rgba(5, 7, 10, 0.6) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Layout Containers */
+    .layout-container {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1300px;
+      padding: 0 40px 100px 40px; /* offset for marquee */
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      align-items: center;
+      gap: 50px;
+    }
+
+    /* Left Block: Outro Greeting & Dynamic AI Narrative */
+    .main-block {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-shadow: 0 0 10px var(--accent-glow-strong);
+      animation: breathe 3s infinite ease-in-out;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.6; text-shadow: 0 0 8px var(--accent-glow); }
+      50% { opacity: 1; text-shadow: 0 0 16px var(--accent-glow-strong); }
+    }
+
+    .title-block h1 {
+      font-family: var(--font-mono);
+      font-size: 44px;
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #aabecf 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Glass Cards */
+    .glass-card {
+      background: rgba(14, 18, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      backdrop-filter: blur(16px);
+      padding: 22px 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-shadow: 0 0 8px var(--accent-glow);
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 6px;
+    }
+
+    /* AI Narrative block */
+    .ai-recap-text {
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .ai-recap-text .placeholder {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* Right Side: Metrics & Next Race */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* Dynamic Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .stat-value.accent {
+      color: var(--accent);
+      text-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    /* Next Broadcast list */
+    .next-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .next-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .next-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      background: rgba(0, 229, 255, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      padding: 3px 8px;
+      border-radius: 4px;
+      width: 80px;
+      text-align: center;
+    }
+
+    .next-content {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Infinite Marquee Footer */
+    .marquee-container {
+      background: rgba(6, 8, 12, 0.7);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(0, 229, 255, 0.25);
+      border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.1);
+      padding: 14px 0;
+      overflow: hidden;
+      white-space: nowrap;
+      position: absolute;
+      bottom: 50px;
+      left: 0;
+      width: 100%;
+      z-index: 4;
+    }
+
+    .marquee-text {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding-left: 100%;
+      animation: marquee 30s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-100%, 0, 0); }
+    }
+
+    /* Social handles */
+    .socials-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .social-badge {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .social-badge:hover {
+      border-color: var(--accent);
+      background: rgba(0, 229, 255, 0.03);
+    }
+
+    .social-icon {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(0, 229, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .social-handle {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-wrapper">
+  <div class="bg-image"></div>
+</div>
+
+<div class="scanlines"></div>
+<div class="dark-overlay"></div>
+
+<div class="layout-container">
+  
+  <!-- Left Side: Greeting & AI Summary -->
+  <div class="main-block">
+    <div class="eyebrow">End of Session</div>
+    
+    <div class="title-block">
+      <h1>Stream Outro</h1>
+    </div>
+
+    <!-- Dynamic AI Narrative Endcap Card -->
+    <div class="glass-card">
+      <div class="card-title" id="ai-recap-title">AI Race Analyst Narrative</div>
+      <div class="ai-recap-text" id="ai-narrative">
+        <span class="placeholder">Awaiting session completion... Narrative will populate once iRacing logs results.</span>
+      </div>
+    </div>
+    
+    <!-- Socials -->
+    <div class="socials-row">
+      <div class="social-badge">
+        <div class="social-icon">TWT</div>
+        <div class="social-handle">twitch.tv/elipwns</div>
+      </div>
+      <div class="social-badge">
+        <div class="social-icon">YT</div>
+        <div class="social-handle">youtube.com/@elipwns</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Performance Summary & Next Race -->
+  <div class="sidebar">
+    
+    <!-- Dynamic Stream Stats -->
+    <div class="glass-card">
+      <div class="card-title">Session Telemetry</div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Races Completed</div>
+          <div class="stat-value accent" id="s-races">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Best Finish</div>
+          <div class="stat-value accent" id="s-best">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Laps Completed</div>
+          <div class="stat-value" id="s-laps">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Total Incidents</div>
+          <div class="stat-value" id="s-incidents">—</div>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+</div>
+
+<!-- Infinite Marquee Credits -->
+<div class="marquee-container">
+  <div class="marquee-text">
+    🏁 THANKS FOR WATCHING! • SHOUTOUT TO TEAM BMW M2 DRIVERS ELI, JACK, AND RYAN • FOLLOW THE CHANNEL FOR NOTIFICATIONS • DISCORD COMMUNITY LINK IN TWITCH CHAT • HAVE A WONDERFUL NIGHT EVERYONE! 🏁
+  </div>
+</div>
+
+<script>
+  function render(data) {
+    const t = data.totals || {};
+    const races = data.races || [];
+    
+    // Bind AI Narrative
+    if (data.session_narrative) {
+      document.getElementById('ai-narrative').innerHTML = `<p>${data.session_narrative}</p>`;
+      if (data.stream_date) {
+        document.getElementById('ai-recap-title').textContent = `AI Race Analyst Narrative • ${data.stream_date}`;
+      }
+    }
+
+    // Bind metrics
+    document.getElementById('s-races').textContent = t.races_completed ?? '—';
+    document.getElementById('s-best').textContent = t.best_finish ? `P${t.best_finish}` : '—';
+    
+    // Calculate telemetry totals
+    const totalLaps = races.reduce((sum, r) => sum + (r.laps || 0), 0);
+    const totalInc = races.reduce((sum, r) => sum + (r.incidents || 0), 0);
+    
+    document.getElementById('s-laps').textContent = totalLaps;
+    document.getElementById('s-incidents').textContent = races.length > 0 ? `${totalInc}x` : '—';
+    
+    // Incidents styling
+    const sInc = document.getElementById('s-incidents');
+    if (races.length > 0) {
+      if (totalInc === 0) {
+        sInc.style.color = '#00e676'; // Perfect clean race!
+      } else if (totalInc > 12 * races.length) {
+        sInc.style.color = '#ff3d00'; // High incidents
+      } else {
+        sInc.style.color = '';
+      }
+    } else {
+      sInc.style.color = '';
+    }
+  }
+
+  async function poll() {
+    try {
+      const res = await fetch('session_data.json?' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        render(data);
+      }
+    } catch {}
+    setTimeout(poll, 8000);
+  }
+
+  poll();
+</script>
+</body>
+</html>

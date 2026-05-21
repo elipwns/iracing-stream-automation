@@ -93,10 +93,11 @@ In OBS, add a **Browser Source** to each scene:
 |---|---|---|---|
 | End Screen | Race Results | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/index.html` | 1920×1080 |
 | End Screen / Outro | Session Recap | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/recap.html` | 1920×1080 |
-| In Car - Racing | Relative Timing | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/relative.html` | 280×900 |
+| Menu / Lobby | Lobby Background Frame | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/lobby.html` | 1920×1080 |
+| In Car - Racing | Odometer & Stats HUD | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/odometer.html` | 310×350 |
 | Pit / Garage | Pit Wall | `file:///C:/Users/elikl/Documents/GitHub/iracing-stream-automation/overlay/pitwall.html` | 400×800 |
 
-For `recap.html`, `relative.html`, and `pitwall.html`: check **Allow transparency** in the browser source properties.
+For `recap.html`, `lobby.html`, `odometer.html`, and `pitwall.html`: check **Allow transparency** in the browser source properties.
 
 ---
 
@@ -135,7 +136,8 @@ All overlays are plain HTML files served as OBS browser sources. They poll local
 
 - **`overlay/index.html`** — End-screen race results. Polls `results.json` every 5 seconds until data arrives, then stops.
 - **`overlay/recap.html`** — Full-session recap. Polls `session_data.json` every 8 seconds. Shows all races from the current stream session with per-category iRating tracking.
-- **`overlay/relative.html`** — Live relative timing strip. Connects to the WebSocket server and shows cars within ±45 seconds, colour-coded by class.
+- **`overlay/lobby.html`** — Lobby background & stats ticker. Provides a 1920x1080 premium sci-fi grid backdrop to sit behind windowed captures, plus a glassmorphic bottom bar featuring a live clock and dynamic scrolling telemetry marquee (active car, trip, total miles, and predicted iRating).
+- **`overlay/odometer.html`** — Odometer & Live Stats HUD. Connects to the WebSocket server and shows active car name, lifetime odometer, session trip, predicted iRating, and session status.
 - **`overlay/pitwall.html`** — Crew chief view. Track map, strategy panel (pace delta, fuel, repair estimate, pit recommendation), and mini relative strip.
 
 ---
@@ -191,7 +193,8 @@ chat_bot.py             # Twitch chat bot (needs TWITCH_TOKEN — see TODO above
 overlay/
   index.html            # end screen race results
   recap.html            # full-session recap
-  relative.html         # live relative timing strip
+  lobby.html            # lobby background frame & live stats ticker
+  odometer.html         # live mechanical odometer & stats HUD
   pitwall.html          # crew chief / pit wall view
   style.css             # shared styles
 ```

@@ -4,133 +4,244 @@
 <meta charset="UTF-8">
 <title>Pit Wall</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap');
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     background: transparent;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    color: #e8e8e8;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: #f0f4f8;
     width: 400px;
+    padding: 8px;
+    overflow: hidden;
   }
 
   #panel {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 10px;
+    gap: 12px;
+    padding: 2px;
   }
 
-  /* ── section cards ── */
+  /* ── section cards (Glassmorphic) ── */
   .card {
-    background: rgba(8, 8, 12, 0.82);
-    border-radius: 6px;
-    padding: 10px 12px;
+    background: rgba(12, 16, 23, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    border-color: rgba(0, 229, 255, 0.15);
   }
 
   .card-title {
+    font-family: 'Orbitron', monospace;
     font-size: 10px;
-    letter-spacing: 0.08em;
+    font-weight: 700;
+    letter-spacing: 2px;
     text-transform: uppercase;
-    color: #666;
-    margin-bottom: 8px;
+    color: #00e5ff;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.2);
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 6px;
   }
 
   /* ── track map ── */
   #map-canvas {
     display: block;
-    margin: 0 auto;
+    margin: 4px auto 0 auto;
+    filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.05));
   }
 
   /* ── strategy grid ── */
   .strat-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 8px;
   }
 
   .strat-cell {
-    background: rgba(255,255,255,0.05);
-    border-radius: 4px;
-    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-left: 3px solid rgba(0, 229, 255, 0.4);
+    border-radius: 5px;
+    padding: 8px 10px;
+    transition: all 0.2s ease;
+  }
+
+  .strat-cell:hover {
+    background: rgba(0, 229, 255, 0.02);
+    border-left-color: #00e5ff;
   }
 
   .strat-label {
-    font-size: 10px;
-    color: #777;
-    margin-bottom: 2px;
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8fa0b5;
+    margin-bottom: 4px;
   }
 
   .strat-value {
-    font-size: 15px;
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    color: #f0f4f8;
   }
 
   /* ── recommendation banner ── */
   #rec-banner {
     display: none;
-    background: rgba(255, 60, 60, 0.18);
-    border: 1px solid rgba(255, 80, 80, 0.4);
-    border-radius: 5px;
-    padding: 8px 12px;
+    background: rgba(255, 61, 0, 0.12);
+    border: 1px solid rgba(255, 61, 0, 0.4);
+    box-shadow: 0 0 15px rgba(255, 61, 0, 0.15), inset 0 0 10px rgba(255, 61, 0, 0.05);
+    border-radius: 6px;
+    padding: 10px 14px;
     font-size: 13px;
-    font-weight: 600;
-    color: #ff7070;
+    font-weight: 700;
+    color: #ff5252;
+    margin-bottom: 10px;
+    animation: flash-red 2s infinite ease-in-out;
   }
 
-  #rec-banner.fuel  { color: #ffc800; border-color: rgba(255,200,0,0.4); background: rgba(255,200,0,0.12); }
-  #rec-banner.pace  { color: #ff9944; border-color: rgba(255,150,60,0.4); background: rgba(255,130,40,0.12); }
+  #rec-banner.fuel { 
+    color: #ffc837; 
+    border-color: rgba(255, 200, 55, 0.4); 
+    background: rgba(255, 200, 55, 0.08); 
+    box-shadow: 0 0 15px rgba(255, 200, 55, 0.1), inset 0 0 10px rgba(255, 200, 55, 0.03);
+    animation: flash-yellow 2s infinite ease-in-out;
+  }
+  
+  #rec-banner.pace { 
+    color: #ff8a65; 
+    border-color: rgba(255, 138, 101, 0.4); 
+    background: rgba(255, 138, 101, 0.08); 
+    box-shadow: 0 0 15px rgba(255, 138, 101, 0.1), inset 0 0 10px rgba(255, 138, 101, 0.03);
+    animation: flash-orange 2s infinite ease-in-out;
+  }
+
+  @keyframes flash-red {
+    0%, 100% { border-color: rgba(255, 61, 0, 0.4); box-shadow: 0 0 10px rgba(255, 61, 0, 0.1); }
+    50% { border-color: rgba(255, 61, 0, 0.8); box-shadow: 0 0 20px rgba(255, 61, 0, 0.35); }
+  }
+
+  @keyframes flash-yellow {
+    0%, 100% { border-color: rgba(255, 200, 55, 0.4); box-shadow: 0 0 10px rgba(255, 200, 55, 0.1); }
+    50% { border-color: rgba(255, 200, 55, 0.8); box-shadow: 0 0 20px rgba(255, 200, 55, 0.35); }
+  }
+
+  @keyframes flash-orange {
+    0%, 100% { border-color: rgba(255, 138, 101, 0.4); box-shadow: 0 0 10px rgba(255, 138, 101, 0.1); }
+    50% { border-color: rgba(255, 138, 101, 0.8); box-shadow: 0 0 20px rgba(255, 138, 101, 0.35); }
+  }
 
   /* ── mini relative strip ── */
   .mini-row {
     display: grid;
-    grid-template-columns: 24px 1fr 56px;
+    grid-template-columns: 28px 1fr 60px;
     align-items: center;
-    height: 22px;
-    padding: 0 4px;
-    border-radius: 3px;
-    margin-bottom: 1px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    transition: all 0.15s ease;
   }
 
-  .mini-row.player { background: rgba(255,200,0,0.18); }
+  .mini-row.player { 
+    background: rgba(255, 200, 55, 0.08); 
+    border: 1px solid rgba(255, 200, 55, 0.3);
+    box-shadow: 0 0 8px rgba(255, 200, 55, 0.1);
+  }
 
-  .mini-pos  { font-size: 10px; color: #888; text-align: center; }
-  .mini-name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mini-gap  { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; color: #aaa; }
-  .mini-row.player .mini-gap { color: #ffc800; }
+  .mini-pos  { 
+    font-family: 'Orbitron', monospace;
+    font-size: 10px; 
+    font-weight: 700;
+    color: #8fa0b5; 
+    text-align: left; 
+  }
+  
+  .mini-row.player .mini-pos {
+    color: #ffc837;
+  }
+
+  .mini-name { 
+    font-size: 12px; 
+    font-weight: 600;
+    color: #e8edf2;
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+  }
+  
+  .mini-gap  { 
+    font-family: 'Orbitron', monospace;
+    font-size: 11px; 
+    font-weight: 700;
+    text-align: right; 
+    font-variant-numeric: tabular-nums; 
+    color: #d1d9e6; 
+  }
+  
+  .mini-row.player .mini-gap { 
+    color: #ffc837; 
+    text-shadow: 0 0 8px rgba(255, 200, 55, 0.3);
+  }
 
   .dot {
     display: inline-block;
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    margin-right: 3px;
+    margin-right: 6px;
+    flex-shrink: 0;
   }
 
   #disconnected {
-    color: #555;
-    font-size: 12px;
-    padding: 12px;
+    color: #8fa0b5;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 14px;
     text-align: center;
+    text-transform: uppercase;
+    animation: breathe 2s infinite ease-in-out;
+  }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
   }
 </style>
 </head>
 <body>
 
 <div id="panel">
-  <div id="disconnected">Waiting for telemetry…</div>
+  <div id="disconnected" class="card">Waiting for telemetry…</div>
 
   <!-- track map -->
   <div class="card" id="map-card" style="display:none">
-    <div class="card-title">Track Map</div>
-    <canvas id="map-canvas" width="370" height="180"></canvas>
+    <div class="card-title">Track Monitor</div>
+    <canvas id="map-canvas" width="364" height="176"></canvas>
   </div>
 
   <!-- strategy -->
   <div class="card" id="strat-card" style="display:none">
-    <div class="card-title">Strategy</div>
+    <div class="card-title">Telemetry & Strategy</div>
     <div id="rec-banner"></div>
-    <div class="strat-grid" style="margin-top:8px">
+    <div class="strat-grid">
       <div class="strat-cell">
         <div class="strat-label">Baseline lap</div>
         <div class="strat-value" id="s-baseline">—</div>
@@ -152,7 +263,7 @@
         <div class="strat-value" id="s-repair">—</div>
       </div>
       <div class="strat-cell">
-        <div class="strat-label">Session time</div>
+        <div class="strat-label">Session remain</div>
         <div class="strat-value" id="s-time">—</div>
       </div>
     </div>
@@ -172,8 +283,8 @@ const GAP_WIN   = 30;
 const CLASS_COLORS = {};
 function classColor(id) {
   if (!CLASS_COLORS[id])
-    CLASS_COLORS[id] = `hsl(${(id * 73) % 360}, 70%, 55%)`;
-  return id === 0 ? '#aaa' : CLASS_COLORS[id];
+    CLASS_COLORS[id] = `hsl(${(id * 73) % 360}, 80%, 55%)`;
+  return id === 0 ? '#aaaaaa' : CLASS_COLORS[id];
 }
 
 function fmtLap(s) {
@@ -210,37 +321,63 @@ function pctToXY(pct) {
 function drawMap(cars) {
   ctx.clearRect(0, 0, W, H);
 
-  // track oval
+  // Outer glow of the track
   ctx.beginPath();
   ctx.ellipse(CX, CY, RX, RY, 0, 0, 2 * Math.PI);
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 18;
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 20;
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.04)';
+  ctx.lineWidth = 14;
   ctx.stroke();
 
-  // start/finish line
-  const [sx, sy] = pctToXY(0);
+  // Track body (dark roadbed)
   ctx.beginPath();
-  ctx.moveTo(sx - 12, sy);
-  ctx.lineTo(sx + 12, sy);
-  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.ellipse(CX, CY, RX, RY, 0, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(10, 14, 20, 0.8)';
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // Futuristic glowing track centerline
+  ctx.beginPath();
+  ctx.ellipse(CX, CY, RX, RY, 0, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // cars
+  // Start/Finish Line
+  const [sx, sy] = pctToXY(0);
+  ctx.beginPath();
+  ctx.moveTo(sx - 8, sy);
+  ctx.lineTo(sx + 8, sy);
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Draw cars
   for (const car of cars) {
     if (car.lap_pct < 0) continue;
     const [x, y] = pctToXY(car.lap_pct);
-    const r = car.is_player ? 8 : 5;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = car.is_player ? '#ffc800' : classColor(car.class_id);
-    ctx.fill();
+    const color = car.is_player ? '#ffc837' : classColor(car.class_id);
+    
+    // Glowing ring for player
     if (car.is_player) {
-      ctx.strokeStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(255, 200, 55, 0.2)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
       ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    
+    // Normal car dot
+    ctx.beginPath();
+    ctx.arc(x, y, car.is_player ? 5.5 : 4.5);
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // Minor border on other cars
+    if (!car.is_player) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
   }
@@ -283,7 +420,10 @@ function render(data) {
   const delta = st.pace_delta;
   const deltaEl = document.getElementById('s-delta');
   deltaEl.textContent = delta != null ? `${delta >= 0 ? '+' : ''}${delta.toFixed(3)}s` : '—';
-  deltaEl.style.color = delta > 1.5 ? '#ff7070' : delta > 0.5 ? '#ffc800' : '#6cf0a0';
+  deltaEl.style.color = delta > 1.5 ? '#ff5252' : delta > 0.5 ? '#ffc837' : '#00e676';
+  if (delta != null) {
+    deltaEl.style.textShadow = delta > 1.5 ? '0 0 8px rgba(255, 82, 82, 0.3)' : delta > 0.5 ? '0 0 8px rgba(255, 200, 55, 0.3)' : '0 0 8px rgba(0, 230, 118, 0.3)';
+  }
 
   document.getElementById('s-fuel').textContent   = st.fuel_laps != null ? `${st.fuel_laps} laps` : '—';
   document.getElementById('s-repair').textContent = st.pit_repair_secs > 0 ? `${st.pit_repair_secs}s` : 'None';
@@ -311,7 +451,9 @@ function render(data) {
 
     const dot = document.createElement('span');
     dot.className = 'dot';
-    dot.style.background = classColor(car.class_id);
+    const clr = classColor(car.class_id);
+    dot.style.background = clr;
+    dot.style.boxShadow = `0 0 6px ${clr}`;
 
     const name = document.createElement('div');
     name.className = 'mini-name';
@@ -335,7 +477,13 @@ let ws;
 function connect() {
   ws = new WebSocket(WS_URL);
   ws.onmessage = e => render(JSON.parse(e.data));
-  ws.onclose   = () => setTimeout(connect, 3000);
+  ws.onclose   = () => {
+    document.getElementById('disconnected').style.display = 'block';
+    document.getElementById('map-card').style.display = 'none';
+    document.getElementById('strat-card').style.display = 'none';
+    document.getElementById('rel-card').style.display = 'none';
+    setTimeout(connect, 3000);
+  };
   ws.onerror   = () => ws.close();
 }
 connect();

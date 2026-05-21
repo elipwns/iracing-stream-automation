@@ -154,7 +154,51 @@ def _build_claude_context(race_data: dict, flag_timeline: list) -> dict:
     }
 
 
-def _write_results(race_data: dict, narrative: str, cust_id: int, dry_run: bool):
+def _write_results(race_data: dict, narrative: str, cust_id: int, dry_run: bool, ir=None):
+    # Retrieve current persistent statistics from telemetry_server if active
+    session_miles = 0.0
+    car_lifetime_miles = 0.0
+    predicted_ir_change = 0
+    player_starting_ir = 1350
+    active_car_name = "BMW M2 CS Racing"
+
+    import telemetry_server
+    try:
+        with telemetry_server._lock:
+            telemetry = dict(telemetry_server._current_data)
+        if telemetry:
+            session_miles = telemetry.get("session_miles", 0.0)
+            car_lifetime_miles = telemetry.get("car_lifetime_miles", 0.0)
+            predicted_ir_change = telemetry.get("predicted_ir_change", 0)
+            player_starting_ir = telemetry.get("player_starting_ir", 1350)
+            active_car_name = telemetry.get("active_car_name", "BMW M2 CS Racing")
+    except Exception as e:
+        print(f"[results_pipeline] Error reading active telemetry: {e}")
+
+    # Fallback to local files / SDK handles if telemetry thread is not connected or cleared
+    if (session_miles <= 0.01 or car_lifetime_miles <= 0.01) and ir is not None:
+        try:
+            player_idx = ir["PlayerCarIdx"] or 0
+            driver_info = ir["DriverInfo"] or {}
+            drivers = driver_info.get("Drivers", [])
+            if drivers and player_idx < len(drivers):
+                p_driver = drivers[player_idx]
+                car_path = p_driver.get("CarPath", "unknown").strip("/")
+                active_car_name = p_driver.get("CarScreenName", "Unknown Car")
+                player_starting_ir = p_driver.get("IRating", 1350) or 1350
+                
+                # Load from mileage database directly
+                mileage_file = Path(__file__).parent / "overlay" / "mileage.json"
+                if mileage_file.exists():
+                    mileage_data = json.loads(mileage_file.read_text())
+                    if car_path in mileage_data.get("cars", {}):
+                        car_lifetime_miles = mileage_data["cars"][car_path].get("miles", 0.0)
+                    elif mileage_data.get("grand_total_miles", 0.0) > 0:
+                        # Fallback to grand total if car specific is empty
+                        car_lifetime_miles = mileage_data["grand_total_miles"]
+        except Exception as e:
+            print(f"[results_pipeline] Odometer fallback extraction failed: {e}")
+
     output = {
         "subsession_id": race_data["subsession_id"],
         "track":         race_data.get("track", ""),
@@ -164,6 +208,13 @@ def _write_results(race_data: dict, narrative: str, cust_id: int, dry_run: bool)
         "my_cust_id":    cust_id,
         "total_laps":    race_data["total_laps"],
         "official":      race_data.get("official", False),
+        
+        # Injected telemetry statistics for End Screen display
+        "session_miles":       round(session_miles, 2),
+        "car_lifetime_miles":  round(car_lifetime_miles, 1),
+        "predicted_ir_change": predicted_ir_change,
+        "player_starting_ir":  player_starting_ir,
+        "active_car_name":     active_car_name,
     }
     for entry in output["results"]:
         entry["best_lap_display"] = _fmt_lap(entry.get("best_lap_time", -1))
@@ -233,7 +284,7 @@ def run(ir=None, session_num: int = 0, cust_id: int | None = None,
 
     print("[results_pipeline] Generating race narrative...")
     narrative = claude_summary.generate_summary(_build_claude_context(race_data, flag_timeline or []))
-    _write_results(race_data, narrative, cust_id, dry_run)
+    _write_results(race_data, narrative, cust_id, dry_run, ir)
     betting.resolve_bets(race_data)
 
     if on_complete:

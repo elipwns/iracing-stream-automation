@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stream Stats Ticker Overlay</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@600;700;800;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-bar: rgba(8, 11, 16, 0.93);
+    --accent: #00e5ff;
+    --accent-glow: rgba(0, 229, 255, 0.25);
+    --accent-glow-strong: rgba(0, 229, 255, 0.6);
+    --text: #f0f4f8;
+    --text-muted: #8fa0b5;
+    
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Orbitron', monospace;
+  }
+
+  body {
+    background: transparent !important;
+    color: var(--text);
+    font-family: var(--font-sans);
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ── Bottom Information Ticker Bar ── */
+  .ticker-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: var(--bg-bar);
+    border-top: 2px solid var(--accent);
+    backdrop-filter: blur(12px);
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 229, 255, 0.08);
+    overflow: hidden;
+  }
+
+  /* Ticker Left Section: Status & Branding */
+  .ticker-left {
+    width: 320px;
+    height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 16px;
+    background: linear-gradient(90deg, rgba(0, 229, 255, 0.03) 0%, transparent 100%);
+  }
+
+  .status-led {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #00e676;
+    box-shadow: 0 0 10px #00e676;
+    animation: pulse 1.8s infinite ease-in-out;
+    transition: all 0.3s ease;
+  }
+
+  .status-led.offline {
+    background: #ff3d00;
+    box-shadow: 0 0 10px #ff3d00;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  .brand-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .brand-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.5px;
+    color: var(--accent);
+    text-shadow: 0 0 8px var(--accent-glow);
+    text-transform: uppercase;
+  }
+
+  .brand-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  /* Ticker Center Section: Scrolling Marquee */
+  .ticker-center {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    position: relative;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  /* Fade out edges for scrolling text */
+  .ticker-center::before,
+  .ticker-center::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    width: 40px;
+    height: 100%;
+    z-index: 12;
+    pointer-events: none;
+  }
+
+  .ticker-center::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--bg-bar), transparent);
+  }
+
+  .ticker-center::after {
+    right: 0;
+    background: linear-gradient(-90deg, var(--bg-bar), transparent);
+  }
+
+  .marquee-wrapper {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .marquee-text {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding-left: 100%;
+    animation: marquee 35s linear infinite;
+  }
+
+  @keyframes marquee {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+  }
+
+  /* Ticker Right Section: Clock & Server Dispatch Info */
+  .ticker-right {
+    width: 280px;
+    height: 100%;
+    border-left: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 24px;
+    gap: 16px;
+    background: linear-gradient(-90deg, rgba(0, 229, 255, 0.02) 0%, transparent 100%);
+  }
+
+  .clock-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+
+  .clock-time {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+  }
+
+  .clock-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .dispatch-badge {
+    background: rgba(0, 229, 255, 0.06);
+    border: 1px solid rgba(0, 229, 255, 0.15);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .dispatch-badge.offline {
+    background: rgba(255, 61, 0, 0.05);
+    border-color: rgba(255, 61, 0, 0.15);
+    color: #ff3d00;
+    text-shadow: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Bottom Ticker Bar -->
+<div class="ticker-bar">
+  <!-- Left Status and Brand -->
+  <div class="ticker-left">
+    <div id="status-dot" class="status-led offline"></div>
+    <div class="brand-group">
+      <span class="brand-title">Lobby Patrol</span>
+      <span id="brand-desc" class="brand-subtitle">Standby Mode</span>
+    </div>
+  </div>
+
+  <!-- Center Telemetry Marquee -->
+  <div class="ticker-center">
+    <div class="marquee-wrapper">
+      <div id="ticker-msg" class="marquee-text">
+        SYSTEM OFFLINE • LOBBY RECON STANDBY • CONNECTING TO TELEMETRY DISPATCH...
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Clock and Label -->
+  <div class="ticker-right">
+    <div class="clock-group">
+      <span id="current-time" class="clock-time">00:00:00 AM</span>
+      <span class="clock-label">LOBBY LOCAL TIME</span>
+    </div>
+    <div id="dispatch-lbl" class="dispatch-badge offline">STDBY</div>
+  </div>
+</div>
+
+<script>
+  // Dynamic Real-time Clock
+  function updateClock() {
+    const now = new Date();
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // hour '0' should be '12'
+    const hoursStr = String(hours).padStart(2, '0');
+    
+    document.getElementById('current-time').textContent = `${hoursStr}:${minutes}:${seconds} ${ampm}`;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // Dynamic Telemetry Client
+  const WS_URL = 'ws://localhost:8765';
+  let ws;
+  let lastCarName = "";
+  let lastSessionMiles = -1;
+  let lastGrandTotalMiles = -1;
+  let lastIrChange = -999;
+  let isConnected = false;
+
+  function updateTicker(data) {
+    const statusDot = document.getElementById('status-dot');
+    const brandDesc = document.getElementById('brand-desc');
+    const tickerMsg = document.getElementById('ticker-msg');
+    const dispatchLbl = document.getElementById('dispatch-lbl');
+
+    if (!data || !data.connected) {
+      setOffline();
+      return;
+    }
+
+    if (!isConnected) {
+      isConnected = true;
+      statusDot.className = 'status-led';
+      dispatchLbl.className = 'dispatch-badge';
+      dispatchLbl.textContent = 'ONLINE';
+    }
+
+    const carName = data.active_car_name || "BMW M2 CS RACING";
+    const sessionMiles = data.session_miles || 0.0;
+    const lifetimeMiles = data.car_lifetime_miles || 0.0;
+    const totalMiles = data.grand_total_miles || 0.0;
+    const irRating = data.player_starting_ir || 1350;
+    const irChange = data.predicted_ir_change || 0;
+    
+    let stateStr = "LOBBY DETECTED";
+    if (data.session_state !== undefined) {
+      const states = {
+        0: "INVALID SESSION", 1: "WARMUP LIVE", 2: "QUALIFY ACTIVE", 3: "RACE ACTIVE", 
+        4: "PRACTICE SESSION", 5: "POST-RACE COOLDOWN", 6: "SESSION COMPLETED"
+      };
+      stateStr = states[data.session_state] || "LOBBY DETECTED";
+    }
+    brandDesc.textContent = stateStr;
+
+    // Only rebuild marquee message if significant telemetry shifts to prevent sudden jump resets
+    if (
+      carName !== lastCarName || 
+      Math.abs(sessionMiles - lastSessionMiles) >= 0.1 || 
+      Math.abs(totalMiles - lastGrandTotalMiles) >= 0.1 ||
+      irChange !== lastIrChange
+    ) {
+      lastCarName = carName;
+      lastSessionMiles = sessionMiles;
+      lastGrandTotalMiles = totalMiles;
+      lastIrChange = irChange;
+
+      const irSign = irChange >= 0 ? '+' : '';
+      
+      const parts = [
+        "• LOBBY TELEMETRY DISPATCH ACTIVE",
+        `CURRENT VEHICLE: ${carName.toUpperCase()}`,
+        `SESSION TRIP: ${sessionMiles.toFixed(2)} MI`,
+        `VEHICLE LIFETIME ODOMETER: ${lifetimeMiles.toFixed(1)} MI`,
+        `TOTAL STREAM DISTANCE: ${totalMiles.toFixed(1)} MI`,
+        `LOBBY iRATING RECON: ${irRating} (${irSign}${irChange} PREDICTED)`,
+        "TWITCH BETS OPEN: CHAT COMMANDS !points · !bet [win/podium/finish/crash] [amount] ACTIVE",
+        "ENJOY THE RACING! FOLLOW THE STREAM TO JOIN OUR NEXT SESSION GRID •"
+      ];
+      
+      tickerMsg.textContent = parts.join("   •   ");
+    }
+  }
+
+  let offlinePollInterval;
+
+  async function loadOfflineStats() {
+    if (isConnected) return;
+    
+    let grandMiles = 0;
+    let todayRaces = 0;
+    let todayBest = "—";
+    
+    try {
+      const resM = await fetch('mileage.json?' + Date.now());
+      if (resM.ok) {
+        const mData = await resM.json();
+        grandMiles = mData.grand_total_miles || 0;
+      }
+    } catch (e) {}
+
+    try {
+      const resS = await fetch('session_data.json?' + Date.now());
+      if (resS.ok) {
+        const sData = await resS.json();
+        todayRaces = (sData.totals && sData.totals.races_completed) || 0;
+        todayBest = (sData.totals && sData.totals.best_finish) ? `P${sData.totals.best_finish}` : "—";
+      }
+    } catch (e) {}
+
+    const tickerMsg = document.getElementById('ticker-msg');
+    if (!isConnected) {
+      const parts = [
+        "• LOBBY RECON STANDBY",
+        "iRACING TELEMETRY DISCONNECTED",
+        `LIFETIME GRAND TOTAL: ${grandMiles.toFixed(1)} MI`,
+        `TODAY'S RACES COMPLETED: ${todayRaces}`,
+        `TODAY'S BEST FINISH: ${todayBest}`,
+        "TWITCH BETS IN STANDBY",
+        "TYPE !points TO CHECK YOUR TOTALS",
+        "ENJOY THE STREAM! •"
+      ];
+      tickerMsg.textContent = parts.join("   •   ");
+    }
+  }
+
+  function setOffline() {
+    isConnected = false;
+    const statusDot = document.getElementById('status-dot');
+    const brandDesc = document.getElementById('brand-desc');
+    const dispatchLbl = document.getElementById('dispatch-lbl');
+
+    statusDot.className = 'status-led offline';
+    brandDesc.textContent = 'STANDBY MODE';
+    dispatchLbl.className = 'dispatch-badge offline';
+    dispatchLbl.textContent = 'STDBY';
+
+    lastCarName = "";
+    lastSessionMiles = -1;
+    lastGrandTotalMiles = -1;
+    lastIrChange = -999;
+
+    loadOfflineStats();
+    if (!offlinePollInterval) {
+      offlinePollInterval = setInterval(loadOfflineStats, 10000);
+    }
+  }
+
+  function connect() {
+    ws = new WebSocket(WS_URL);
+    
+    ws.onmessage = function(event) {
+      try {
+        if (offlinePollInterval) {
+          clearInterval(offlinePollInterval);
+          offlinePollInterval = null;
+        }
+        const data = JSON.parse(event.data);
+        updateTicker(data);
+      } catch (e) {
+        console.error("Error parsing telemetry in lobby ticker: ", e);
+      }
+    };
+    
+    ws.onclose = function() {
+      setOffline();
+      setTimeout(connect, 3000);
+    };
+    
+    ws.onerror = function() {
+      ws.close();
+    };
+  }
+
+  connect();
+</script>
+</body>
+</html>

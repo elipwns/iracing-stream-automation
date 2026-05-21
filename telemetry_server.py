@@ -2,6 +2,7 @@ import asyncio
 import json
 import threading
 import time
+from pathlib import Path
 import irsdk
 
 HOST = "localhost"
@@ -9,6 +10,53 @@ PORT = 8765
 
 _current_data: dict = {}
 _lock = threading.Lock()
+
+OVERLAY_DIR = Path(__file__).parent / "overlay"
+MILEAGE_JSON = OVERLAY_DIR / "mileage.json"
+
+# Global state for mileage tracking
+_mileage_data = {
+    "grand_total_miles": 0.0,
+    "cars": {}
+}
+_session_meters = 0.0
+_active_car_path = "unknown"
+_active_car_name = "Unknown Car"
+
+
+def _load_mileage():
+    global _mileage_data
+    try:
+        if MILEAGE_JSON.exists():
+            _mileage_data = json.loads(MILEAGE_JSON.read_text())
+    except Exception as e:
+        print(f"[telemetry] Error loading mileage: {e}")
+
+
+def _save_mileage():
+    global _mileage_data, _session_meters, _active_car_path, _active_car_name
+    if _session_meters <= 0:
+        return
+    
+    session_miles = _session_meters * 0.000621371
+    
+    if _active_car_path not in _mileage_data["cars"]:
+        _mileage_data["cars"][_active_car_path] = {
+            "name": _active_car_name,
+            "miles": 0.0
+        }
+    
+    _mileage_data["cars"][_active_car_path]["miles"] += session_miles
+    _mileage_data["grand_total_miles"] += session_miles
+    
+    try:
+        OVERLAY_DIR.mkdir(exist_ok=True)
+        MILEAGE_JSON.write_text(json.dumps(_mileage_data, indent=2))
+        print(f"[telemetry] Saved mileage: +{session_miles:.3f} miles to {_active_car_name}")
+    except Exception as e:
+        print(f"[telemetry] Error saving mileage: {e}")
+    
+    _session_meters = 0.0
 
 
 def _fmt_gap(secs: float) -> str:
@@ -111,27 +159,126 @@ def _build_cars(ir, player_idx: int, drivers: list[dict], rolling_avg: float | N
     cars.sort(key=lambda c: c["gap_secs"] if c["gap_secs"] is not None else 999)
     return cars
 
+def _predict_ir_change(ir, player_idx: int, drivers: list[dict]) -> int:
+    """Calculates the predicted iRating change based on the Elo rating system within the player's class."""
+    if not drivers or player_idx >= len(drivers):
+        return 0
+    
+    player_driver = drivers[player_idx]
+    player_class_id = player_driver.get("CarClassID", -1)
+    player_irating = player_driver.get("IRating", 1350) or 1350
+    
+    # We need the current standings order
+    positions = ir["CarIdxPosition"] or []
+    if player_idx >= len(positions):
+        return 0
+    
+    player_pos = positions[player_idx]
+    if player_pos <= 0:
+        return 0  # not officially running / scored yet
+    
+    # Gather other drivers in the same class
+    competitors = []
+    for idx, drv in enumerate(drivers):
+        if idx == player_idx:
+            continue
+        if idx >= len(positions):
+            continue
+            
+        drv_class_id = drv.get("CarClassID", -1)
+        if drv_class_id != player_class_id:
+            continue
+            
+        drv_pos = positions[idx]
+        if drv_pos <= 0:
+            continue
+            
+        competitors.append({
+            "irating": drv.get("IRating", 1350) or 1350,
+            "position": drv_pos
+        })
+        
+    N = len(competitors) + 1
+    if N <= 1:
+        return 0
+        
+    # iRating Elo scaling factor K
+    K = 200.0 / (N - 1)
+    
+    elo_sum = 0.0
+    for comp in competitors:
+        comp_irating = comp["irating"]
+        comp_pos = comp["position"]
+        
+        # Expected probability of us beating them
+        P = 1.0 / (1.0 + 10.0 ** ((comp_irating - player_irating) / 400.0))
+        
+        # Actual result (1.0 if we finish ahead of them, 0.0 if behind)
+        if player_pos < comp_pos:
+            W = 1.0
+        elif player_pos > comp_pos:
+            W = 0.0
+        else:
+            W = 0.5  # tie
+            
+        elo_sum += (W - P)
+        
+    return int(round(K * elo_sum))
+
 
 def _polling_thread():
+    global _session_meters, _active_car_path, _active_car_name
     ir = irsdk.IRSDK()
     lap_times: list[float] = []
     last_lap = -1
+    iracing_was_connected = False
+    
+    _load_mileage()
+    last_tick_time = time.time()
 
     while True:
         ir.startup()
         if not ir.is_connected:
+            if iracing_was_connected:
+                _save_mileage()
+                iracing_was_connected = False
+                lap_times.clear()
+                last_lap = -1
             with _lock:
                 _current_data.clear()
             time.sleep(0.5)
             continue
 
+        if not iracing_was_connected:
+            iracing_was_connected = True
+            _load_mileage()
+            _session_meters = 0.0
+            last_tick_time = time.time()
+            print("[telemetry] iRacing connected")
+
         ir.freeze_var_buffer_latest()
+
+        # Speed integration for persistent odometer
+        now = time.time()
+        dt = now - last_tick_time
+        last_tick_time = now
+        
+        speed = ir["Speed"] or 0.0  # m/s
+        if speed > 0.1:  # ignore stationary noise
+            _session_meters += speed * dt
 
         player_idx   = ir["PlayerCarIdx"] or 0
         driver_info  = ir["DriverInfo"] or {}
         drivers      = driver_info.get("Drivers", [])
         current_lap  = ir["Lap"] or 0
         last_lap_t   = ir["LapLastLapTime"] or -1
+
+        # Detect active car path/name from drivers list
+        p_driver = {}
+        if drivers and player_idx < len(drivers):
+            p_driver = drivers[player_idx]
+            _active_car_path = p_driver.get("CarPath", "unknown").strip("/")
+            _active_car_name = p_driver.get("CarScreenName", "Unknown Car")
 
         if current_lap != last_lap and last_lap_t > 0:
             lap_times.append(last_lap_t)
@@ -147,6 +294,21 @@ def _polling_thread():
 
         player_car = next((c for c in cars if c["is_player"]), {})
 
+        # Compute persistent odometer and iRating metrics
+        session_miles = _session_meters * 0.000621371
+        
+        car_miles_base = 0.0
+        if _active_car_path in _mileage_data["cars"]:
+            car_miles_base = _mileage_data["cars"][_active_car_path]["miles"]
+            
+        grand_miles_base = _mileage_data.get("grand_total_miles", 0.0)
+        
+        car_lifetime_miles = car_miles_base + session_miles
+        grand_total_miles = grand_miles_base + session_miles
+        
+        predicted_ir_change = _predict_ir_change(ir, player_idx, drivers)
+        player_starting_ir = p_driver.get("IRating", 1350) or 1350
+
         payload = {
             "connected":    True,
             "session_state": ir["SessionState"],
@@ -157,6 +319,15 @@ def _polling_thread():
             "strategy":     strategy,
             "cars":         cars,
             "ts":           time.time(),
+            
+            # Odometer and iRating predictor details
+            "active_car_path":     _active_car_path,
+            "active_car_name":     _active_car_name,
+            "session_miles":       round(session_miles, 2),
+            "car_lifetime_miles":  round(car_lifetime_miles, 1),
+            "grand_total_miles":   round(grand_total_miles, 1),
+            "player_starting_ir":  player_starting_ir,
+            "predicted_ir_change": predicted_ir_change,
         }
 
         with _lock:

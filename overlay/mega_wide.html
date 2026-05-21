@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mega Wide Background HUD</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.25);
+      --accent-glow-strong: rgba(0, 229, 255, 0.6);
+      --text: #f0f4f8;
+      --text-muted: #8fa0b5;
+      
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Orbitron', monospace;
+    }
+
+    body {
+      background: transparent; /* Transparent so iRacing capture sits centered over/under overlay */
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 1080px;
+      width: 1920px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Cyber scanlines overlay */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 1080px;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.12) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* TOP BAR (Y: 0 to 360) */
+    .hud-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 360px;
+      background: linear-gradient(to bottom, #05070a 0%, rgba(5, 7, 10, 0.95) 75%, rgba(5, 7, 10, 0.8) 90%, transparent 100%);
+      padding: 40px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 10;
+    }
+
+    /* BOTTOM BAR (Y: 720 to 1080) */
+    .hud-footer {
+      position: absolute;
+      top: 720px;
+      left: 0;
+      width: 100%;
+      height: 360px;
+      background: linear-gradient(to top, #05070a 0%, rgba(5, 7, 10, 0.95) 75%, rgba(5, 7, 10, 0.8) 90%, transparent 100%);
+      padding: 30px 60px 45px 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    /* Radial Carbon Dot pattern underlaid on bars */
+    .hud-header::before, .hud-footer::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: radial-gradient(rgba(0, 229, 255, 0.035) 1px, transparent 1px);
+      background-size: 16px 16px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Glowing LED Bezels framing the game screen */
+    .border-top {
+      position: absolute;
+      top: 359px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 5%, var(--accent) 25%, var(--accent) 75%, transparent 95%);
+      box-shadow: 0 3px 12px var(--accent-glow-strong);
+      z-index: 20;
+    }
+
+    .border-bottom {
+      position: absolute;
+      top: 719px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 5%, var(--accent) 25%, var(--accent) 75%, transparent 95%);
+      box-shadow: 0 -3px 12px var(--accent-glow-strong);
+      z-index: 20;
+    }
+
+    /* Left Block: Info */
+    .header-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .car-badge {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+
+    .series-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .session-badge-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .session-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(0, 229, 255, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(0, 229, 255, 0.25);
+      padding: 3px 10px;
+      border-radius: 4px;
+      letter-spacing: 1.5px;
+      text-align: center;
+    }
+
+    .lap-counter {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 1.5px;
+    }
+
+    /* Center Block: Strategy Banner */
+    .header-center {
+      align-self: center;
+    }
+
+    .strategy-banner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 30px;
+      padding: 8px 20px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+    }
+
+    .strategy-banner.optimal {
+      background: rgba(0, 230, 118, 0.06);
+      border-color: rgba(0, 230, 118, 0.2);
+      color: #00e676;
+      text-shadow: 0 0 6px rgba(0, 230, 118, 0.25);
+    }
+
+    .strategy-banner.alert {
+      background: rgba(255, 61, 0, 0.08);
+      border-color: rgba(255, 61, 0, 0.3);
+      color: #ff3d00;
+      text-shadow: 0 0 8px rgba(255, 61, 0, 0.35);
+      animation: alert-pulse 1.5s infinite ease-in-out;
+    }
+
+    @keyframes alert-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 1; box-shadow: 0 0 15px rgba(255, 61, 0, 0.15); }
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Right Block: Telemetry Gauges */
+    .header-right {
+      display: flex;
+      gap: 16px;
+    }
+
+    .gauge-card {
+      background: rgba(14, 18, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      backdrop-filter: blur(16px);
+      padding: 14px 18px;
+      width: 160px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .gauge-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .gauge-value {
+      font-family: var(--font-mono);
+      font-size: 19px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .gauge-value.accent {
+      color: var(--accent);
+      text-shadow: 0 0 8px var(--accent-glow-strong);
+    }
+
+    .gauge-sub {
+      font-size: 9.5px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-top: 5px;
+    }
+
+    /* Footer Layout */
+    .footer-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* Active Driver Lineup Roster */
+    .roster-container {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .roster-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .roster-badges {
+      display: flex;
+      gap: 8px;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      padding: 4px 12px;
+      border-radius: 6px;
+      letter-spacing: 1px;
+      transition: all 0.25s ease;
+    }
+
+    .badge.active {
+      background: rgba(0, 229, 255, 0.08);
+      border-color: rgba(0, 229, 255, 0.35);
+      color: var(--accent);
+      text-shadow: 0 0 8px var(--accent-glow);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Persistent Odometer Dashboard Dials */
+    .odo-container {
+      display: flex;
+      flex-direction: column;
+      margin-left: 36px;
+    }
+
+    .odo-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .odo-meter-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .odo-mechanical {
+      display: flex;
+      background: #11151d;
+      border: 2px solid #222a36;
+      border-radius: 4px;
+      padding: 3px 5px;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .odo-digit {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 900;
+      width: 14px;
+      height: 22px;
+      line-height: 22px;
+      text-align: center;
+      color: #ffffff;
+      background: linear-gradient(to bottom, #1a202c 0%, #0d1117 50%, #1a202c 100%);
+      margin: 0 1px;
+      border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .odo-digit.decimal-digit {
+      color: #05070a;
+      background: linear-gradient(to bottom, #ffffff 0%, #e2e8f0 50%, #ffffff 100%);
+    }
+
+    .odo-decimal {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--accent);
+      padding: 0 2px;
+      line-height: 22px;
+    }
+
+    .odo-trip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--accent);
+      text-shadow: 0 0 8px var(--accent-glow);
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid rgba(0, 229, 255, 0.15);
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* Live iRating Predictor Styling */
+    .ir-pred-card {
+      background: rgba(14, 18, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      backdrop-filter: blur(16px);
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      width: 175px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      margin-left: 36px;
+    }
+
+    .ir-pred-label {
+      font-size: 8.5px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .ir-pred-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .ir-pred-base {
+      font-family: var(--font-mono);
+      font-size: 17px;
+      font-weight: 900;
+      color: #ffffff;
+    }
+
+    .ir-pred-delta {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ir-pred-delta.positive {
+      color: #00e676;
+      text-shadow: 0 0 8px rgba(0, 230, 118, 0.4);
+    }
+
+    .ir-pred-delta.negative {
+      color: #ff3d00;
+      text-shadow: 0 0 8px rgba(255, 61, 0, 0.4);
+    }
+
+    /* Socials row */
+    .socials-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .social-badge {
+      background: rgba(14, 18, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(16px);
+      border-radius: 8px;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .social-icon {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(0, 229, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .social-handle {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    /* Infinite Marquee Footer */
+    .marquee-container {
+      background: rgba(6, 8, 12, 0.75);
+      backdrop-filter: blur(8px);
+      border-top: 1px solid rgba(0, 229, 255, 0.2);
+      border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.05);
+      padding: 12px 0;
+      overflow: hidden;
+      white-space: nowrap;
+      width: 100%;
+      margin-top: auto;
+    }
+
+    .marquee-text {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding-left: 100%;
+      animation: marquee 30s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% { transform: translate3d(0, 0, 0); }
+      100% { transform: translate3d(-100%, 0, 0); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div class="border-top"></div>
+<div class="border-bottom"></div>
+
+<!-- HUD Header Bar -->
+<div class="hud-header">
+  <div class="header-left">
+    <div class="car-badge">BMW M2 CS RACING</div>
+    <div class="series-title">Nürburgring Endurance Championship</div>
+    <div class="session-badge-row">
+      <span class="session-badge" id="session-type">RACE</span>
+      <span class="lap-counter">LAP <span id="lap-val">—</span></span>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="strategy-banner" id="strategy-banner">
+      <div class="status-dot"></div>
+      <span id="strategy-status-text">CONNECTING TO SIM TELEMETRY...</span>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="gauge-card">
+      <div class="gauge-label">Fuel Remaining</div>
+      <div class="gauge-value" id="gauge-fuel">—</div>
+      <div class="gauge-sub" id="gauge-fuel-laps">— laps estimated</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-label">Pace Delta</div>
+      <div class="gauge-value" id="gauge-pace">—</div>
+      <div class="gauge-sub" id="gauge-pace-sub">vs baseline</div>
+    </div>
+    <div class="gauge-card">
+      <div class="gauge-label">Time Remaining</div>
+      <div class="gauge-value accent" id="gauge-time">—</div>
+      <div class="gauge-sub">Session Clock</div>
+    </div>
+  </div>
+</div>
+
+<!-- HUD Footer Bar -->
+<div class="hud-footer">
+  <div class="footer-row">
+    <div class="roster-container">
+      <div class="roster-label">Active Driver Stint</div>
+      <div class="roster-badges" id="roster-badges">
+        <span class="badge" id="badge-eli">ELI</span>
+        <span class="badge" id="badge-jack">JACK</span>
+        <span class="badge" id="badge-ryan">RYAN</span>
+      </div>
+    </div>
+
+    <!-- Persistent Odometer Dials -->
+    <div class="odo-container">
+      <div class="odo-label">Vehicle Odometer</div>
+      <div class="odo-meter-wrapper">
+        <div class="odo-mechanical">
+          <div class="odo-digit" id="odo-d5">0</div>
+          <div class="odo-digit" id="odo-d4">0</div>
+          <div class="odo-digit" id="odo-d3">0</div>
+          <div class="odo-digit" id="odo-d2">0</div>
+          <div class="odo-digit" id="odo-d1">0</div>
+          <div class="odo-decimal">.</div>
+          <div class="odo-digit decimal-digit" id="odo-df">0</div>
+        </div>
+        <div class="odo-trip" id="odo-trip-val">0.0 MI</div>
+      </div>
+    </div>
+
+    <!-- Live iRating Predictor -->
+    <div class="ir-pred-card">
+      <div class="ir-pred-label">Predicted iRating</div>
+      <div class="ir-pred-row">
+        <div class="ir-pred-base" id="ir-pred-base">—</div>
+        <div class="ir-pred-delta" id="ir-pred-delta">—</div>
+      </div>
+    </div>
+
+    <div class="socials-row">
+      <div class="social-badge">
+        <div class="social-icon">TWT</div>
+        <div class="social-handle">twitch.tv/elipwns</div>
+      </div>
+      <div class="social-badge">
+        <div class="social-icon">YT</div>
+        <div class="social-handle">youtube.com/@elipwns</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="marquee-container">
+    <div class="marquee-text">
+      🏁 TEAM BMW M2 CS RACING • GOAL: LEAD LAP FINISH, CLEAN LAPS, NO QUICK REPAIR • DRIVER ROSTER: ELI, JACK, RYAN • STREAM POWERED BY ANTIGRAVITY AUTOMATION 🏁
+    </div>
+  </div>
+</div>
+
+<script>
+  let socket = null;
+
+  function formatTime(secs) {
+    if (!secs || secs <= 0) return "—";
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${h}:${pad(m)}:${pad(s)}`;
+  }
+
+  function updateTelemetry(data) {
+    if (!data || !data.connected) {
+      setOffline();
+      return;
+    }
+
+    // 1. Session Type & Lap Count
+    const lapVal = data.lap || 0;
+    document.getElementById('lap-val').textContent = lapVal > 0 ? lapVal : '—';
+    
+    let stateStr = "RACE";
+    if (data.session_state !== undefined) {
+      const states = {
+        0: "INVALID", 1: "WARMUP", 2: "QUALIFY", 3: "RACE", 
+        4: "PRACTICE", 5: "COOLDOWN", 6: "COMPLETE"
+      };
+      stateStr = states[data.session_state] || "SESSION";
+    }
+    document.getElementById('session-type').textContent = stateStr;
+
+    // 2. Strategy Banner (recommend_pit & reasons)
+    const strategy = data.strategy || {};
+    const banner = document.getElementById('strategy-banner');
+    const bannerText = document.getElementById('strategy-status-text');
+    
+    if (strategy.recommend_pit) {
+      banner.className = "strategy-banner alert";
+      bannerText.textContent = `PIT ADVISORY: ${strategy.reason.toUpperCase()}`;
+    } else {
+      banner.className = "strategy-banner optimal";
+      bannerText.textContent = "STRATEGY STATUS: OPTIMAL";
+    }
+
+    // 3. Right side gauges
+    // Fuel level
+    if (strategy.fuel_level !== undefined && strategy.fuel_level !== null) {
+      document.getElementById('gauge-fuel').textContent = `${strategy.fuel_level.toFixed(1)} L`;
+      if (strategy.fuel_laps !== undefined && strategy.fuel_laps !== null) {
+        document.getElementById('gauge-fuel-laps').textContent = `~${strategy.fuel_laps.toFixed(1)} LAPS EST`;
+      } else {
+        document.getElementById('gauge-fuel-laps').textContent = "— laps estimated";
+      }
+    } else {
+      document.getElementById('gauge-fuel').textContent = "—";
+      document.getElementById('gauge-fuel-laps').textContent = "— laps estimated";
+    }
+
+    // Pace delta vs baseline
+    if (strategy.pace_delta !== undefined && strategy.pace_delta !== null) {
+      const pd = strategy.pace_delta;
+      document.getElementById('gauge-pace').textContent = (pd >= 0 ? '+' : '') + pd.toFixed(3) + 's';
+      document.getElementById('gauge-pace').style.color = pd <= 0.1 ? '#00e676' : pd <= 1.2 ? '' : '#ff3d00';
+    } else {
+      document.getElementById('gauge-pace').textContent = "—";
+      document.getElementById('gauge-pace').style.color = '';
+    }
+
+    // Session clockcountdown
+    if (strategy.session_time_remain !== undefined && strategy.session_time_remain !== null) {
+      document.getElementById('gauge-time').textContent = formatTime(strategy.session_time_remain);
+    } else {
+      document.getElementById('gauge-time').textContent = "—";
+    }
+
+    // 4. Stint highlights based on player name from telemetry
+    const playerCar = data.player_car || {};
+    const playerName = (playerCar.name || "").toLowerCase();
+    
+    document.getElementById('badge-eli').classList.remove('active');
+    document.getElementById('badge-jack').classList.remove('active');
+    document.getElementById('badge-ryan').classList.remove('active');
+    
+    if (playerName.includes('eli')) {
+      document.getElementById('badge-eli').classList.add('active');
+    } else if (playerName.includes('jack')) {
+      document.getElementById('badge-jack').classList.add('active');
+    } else if (playerName.includes('ryan')) {
+      document.getElementById('badge-ryan').classList.add('active');
+    }
+
+    // 5. Update Active Car Badge Label dynamically
+    const carName = data.active_car_name || "BMW M2 CS RACING";
+    document.querySelector('.car-badge').textContent = carName.toUpperCase();
+
+    // 6. Update Persistent Odometer (Lifetime + Session Trip)
+    const odoTotal = data.car_lifetime_miles || 0.0;
+    const odoTrip = data.session_miles || 0.0;
+
+    // Convert total miles to a padded string of format "000000" (the 6th is tenth decimal)
+    const odoInt = Math.floor(odoTotal * 10);
+    const odoStr = String(odoInt).padStart(6, '0');
+
+    document.getElementById('odo-d5').textContent = odoStr[0];
+    document.getElementById('odo-d4').textContent = odoStr[1];
+    document.getElementById('odo-d3').textContent = odoStr[2];
+    document.getElementById('odo-d2').textContent = odoStr[3];
+    document.getElementById('odo-d1').textContent = odoStr[4];
+    document.getElementById('odo-df').textContent = odoStr[5];
+
+    document.getElementById('odo-trip-val').textContent = `${odoTrip.toFixed(1)} MI`;
+
+    // 7. Update iRating Predictor Card
+    const startingIR = data.player_starting_ir || 1350;
+    const irChange = data.predicted_ir_change || 0;
+    document.getElementById('ir-pred-base').textContent = startingIR;
+    
+    const irDeltaEl = document.getElementById('ir-pred-delta');
+    const irSign = irChange >= 0 ? '+' : '';
+    irDeltaEl.textContent = `${irSign}${irChange}`;
+    irDeltaEl.className = 'ir-pred-delta ' + (irChange > 0 ? 'positive' : irChange < 0 ? 'negative' : '');
+  }
+
+  function setOffline() {
+    document.getElementById('lap-val').textContent = '—';
+    document.getElementById('session-type').textContent = 'OFFLINE';
+    
+    const banner = document.getElementById('strategy-banner');
+    const bannerText = document.getElementById('strategy-status-text');
+    banner.className = "strategy-banner";
+    bannerText.textContent = "TELEMETRY STATUS: DISCONNECTED";
+    
+    document.getElementById('gauge-fuel').textContent = "—";
+    document.getElementById('gauge-fuel-laps').textContent = "— laps estimated";
+    document.getElementById('gauge-pace').textContent = "—";
+    document.getElementById('gauge-pace').style.color = '';
+    document.getElementById('gauge-time').textContent = "—";
+    
+    document.getElementById('badge-eli').classList.remove('active');
+    document.getElementById('badge-jack').classList.remove('active');
+    document.getElementById('badge-ryan').classList.remove('active');
+
+    // Reset mechanical dials
+    document.getElementById('odo-d5').textContent = '0';
+    document.getElementById('odo-d4').textContent = '0';
+    document.getElementById('odo-d3').textContent = '0';
+    document.getElementById('odo-d2').textContent = '0';
+    document.getElementById('odo-d1').textContent = '0';
+    document.getElementById('odo-df').textContent = '0';
+    document.getElementById('odo-trip-val').textContent = '0.0 MI';
+    
+    document.getElementById('ir-pred-base').textContent = '—';
+    document.getElementById('ir-pred-delta').textContent = '—';
+    document.getElementById('ir-pred-delta').className = 'ir-pred-delta';
+  }
+
+  function connect() {
+    socket = new WebSocket('ws://localhost:8765');
+    
+    socket.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        updateTelemetry(data);
+      } catch (e) {
+        console.error("Error parsing telemetry: ", e);
+      }
+    };
+    
+    socket.onclose = function() {
+      setOffline();
+      setTimeout(connect, 3000);
+    };
+    
+    socket.onerror = function() {
+      socket.close();
+    };
+  }
+
+  // Init
+  connect();
+</script>
+</body>
+</html>

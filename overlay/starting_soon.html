@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starting Soon Overlay</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #030508;
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.3);
+      --accent-glow-strong: rgba(0, 229, 255, 0.6);
+      --text: #f0f4f8;
+      --text-muted: #8fa0b5;
+      
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Orbitron', monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    /* Animated background */
+    .bg-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .bg-image {
+      width: 100%;
+      height: 100%;
+      background: url('assets/starting_soon_bg.png') no-repeat center center;
+      background-size: cover;
+      filter: brightness(0.6) contrast(1.1);
+      animation: scale-bg 20s infinite ease-in-out;
+    }
+
+    @keyframes scale-bg {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Cyber scanlines overlay */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .dark-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, transparent 30%, rgba(5, 7, 10, 0.8) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Layout Containers */
+    .layout-container {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      max-width: 1300px;
+      padding: 0 40px;
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      align-items: center;
+      gap: 50px;
+    }
+
+    /* Left Block: Countdown & Titles */
+    .main-block {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-shadow: 0 0 10px var(--accent-glow-strong);
+      animation: breathe 3s infinite ease-in-out;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 0.6; text-shadow: 0 0 8px var(--accent-glow); }
+      50% { opacity: 1; text-shadow: 0 0 16px var(--accent-glow-strong); }
+    }
+
+    .title-block h1 {
+      font-family: var(--font-mono);
+      font-size: 46px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -1px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #ffffff 0%, #aabecf 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-block p {
+      font-size: 17px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Circular SVG Timer */
+    .timer-container {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      margin-top: 10px;
+    }
+
+    .svg-ring-wrapper {
+      position: relative;
+      width: 180px;
+      height: 180px;
+    }
+
+    .svg-ring-wrapper svg {
+      transform: rotate(-90deg);
+    }
+
+    .ring-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.03);
+      stroke-width: 8px;
+    }
+
+    .ring-progress {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 8px;
+      stroke-linecap: round;
+      stroke-dasharray: 502; /* 2 * PI * r (r=80) */
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear;
+      filter: drop-shadow(0 0 8px var(--accent-glow-strong));
+    }
+
+    .timer-text {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .timer-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* Right Block: Glass cards */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .glass-card {
+      background: rgba(14, 18, 24, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+      padding: 20px 22px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-title {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      text-shadow: 0 0 8px var(--accent-glow);
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 6px;
+    }
+
+    .objective-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .objective-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .objective-emoji {
+      font-size: 16px;
+      width: 20px;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .objective-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .objective-header {
+      font-weight: 700;
+      font-size: 13.5px;
+      color: var(--text);
+    }
+
+    .objective-desc {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* Multiclass Field list styling */
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field-class {
+      background: rgba(255,255,255,0.015);
+      border: 1px solid rgba(255,255,255,0.03);
+      border-radius: 6px;
+      padding: 8px 10px;
+    }
+
+    .class-header {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .class-cars {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .class-cars strong {
+      color: var(--text);
+    }
+
+    /* Social Badges */
+    .socials-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .social-badge {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s ease;
+    }
+
+    .social-badge:hover {
+      border-color: var(--accent);
+      background: rgba(0, 229, 255, 0.03);
+    }
+
+    .social-icon {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--accent);
+      background: rgba(0, 229, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+
+    .social-handle {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .social-desc {
+      font-size: 8.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 1px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-wrapper">
+  <div class="bg-image"></div>
+</div>
+<div class="scanlines"></div>
+<div class="dark-overlay"></div>
+
+<div class="layout-container">
+  
+  <!-- Left Side: Countdown -->
+  <div class="main-block">
+    <div class="eyebrow">Sim Racing Automation</div>
+    
+    <div class="title-block">
+      <h1 id="stream-headline">Starting Soon</h1>
+      <p id="stream-subheadline">Nürburgring Endurance Championship • Multiclass 4-Hour</p>
+    </div>
+    
+    <div class="timer-container">
+      <div class="svg-ring-wrapper">
+        <svg width="180" height="180">
+          <circle class="ring-bg" cx="90" cy="90" r="80"></circle>
+          <circle class="ring-progress" id="progress-circle" cx="90" cy="90" r="80"></circle>
+        </svg>
+        <div class="timer-text" id="timer-display">10:00</div>
+      </div>
+      <div>
+        <div class="timer-label">Session Starts In</div>
+        <div id="status-text" style="font-size: 14px; font-weight: 600; color: var(--accent); margin-top: 4px;">Forming Grid...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Goals & Multiclass Field -->
+  <div class="sidebar">
+    
+    <!-- Objectives -->
+    <div class="glass-card">
+      <div class="card-title">Team Strategy & Goals</div>
+      <div class="objective-list">
+        <div class="objective-item">
+          <div class="objective-emoji">🏎️</div>
+          <div class="objective-content">
+            <div class="objective-header">BMW M2 CS Racing (NEC Cup)</div>
+            <div class="objective-desc">Team Drivers: <strong>Eli, Jack & Ryan</strong> sharing the cockpit.</div>
+          </div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-emoji">🏁</div>
+          <div class="objective-content">
+            <div class="objective-header">Finish on the Lead Lap</div>
+            <div class="objective-desc">Consistency and strict pace management around the Nordschleife.</div>
+          </div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-emoji">🛠️</div>
+          <div class="objective-content">
+            <div class="objective-header">Zero Quick Repairs</div>
+            <div class="objective-desc">Keep the car fully clean. Avoid costly pit-wall brushes.</div>
+          </div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-emoji">⚠️</div>
+          <div class="objective-content">
+            <div class="objective-header">Multiclass Survival</div>
+            <div class="objective-desc">Survive heavy GT3/GT4 traffic. Stay alert in corners!</div>
+          </div>
+        </div>
+        <div class="objective-item">
+          <div class="objective-emoji">❤️</div>
+          <div class="objective-content">
+            <div class="objective-header">Most Importantly: Have Fun!</div>
+            <div class="objective-desc">It's a long 4-hour race. Keep the vibes high and execute.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multiclass Field -->
+    <div class="glass-card">
+      <div class="card-title">Multiclass Field Grid</div>
+      <div class="field-grid">
+        <div class="field-class">
+          <div class="class-header">GT3 / PCUP</div>
+          <div class="class-cars">GT3 Cars & 911 Cup. Max speed passing traffic.</div>
+        </div>
+        <div class="field-class">
+          <div class="class-header">GT4 / TCR</div>
+          <div class="class-cars">Caymans, Astons, Elantras & Civic TCRs.</div>
+        </div>
+        <div class="field-class" style="grid-column: span 2; border-left: 2.5px solid var(--accent); background: rgba(0,229,255,0.02)">
+          <div class="class-header">NEC M2 CUP (OUR CLASS)</div>
+          <div class="class-cars"><strong>BMW M2 CS Racing</strong>. Level playing field, tight bumper-to-bumper racing.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Socials -->
+    <div class="socials-row">
+      <div class="social-badge">
+        <div class="social-icon">TWT</div>
+        <div>
+          <div class="social-handle">elipwns</div>
+          <div class="social-desc">Twitch Channel</div>
+        </div>
+      </div>
+      <div class="social-badge">
+        <div class="social-icon">YT</div>
+        <div>
+          <div class="social-handle">@elipwns</div>
+          <div class="social-desc">Race Highlights</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+  // Edit variables here to configure countdown duration (in seconds)
+  const STARTING_TIME = 600; // 10 minutes
+  
+  let timeRemaining = STARTING_TIME;
+  const progressCircle = document.getElementById('progress-circle');
+  const timerDisplay = document.getElementById('timer-display');
+  const statusText = document.getElementById('status-text');
+  
+  const circleRadius = 80;
+  const circumference = 2 * Math.PI * circleRadius; // 502.65
+
+  function updateTimer() {
+    const minutes = Math.floor(timeRemaining / 60);
+    const seconds = timeRemaining % 60;
+    
+    // Display digits
+    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    
+    // Animate SVG Ring Dash Offset
+    const progressFraction = timeRemaining / STARTING_TIME;
+    const dashOffset = circumference * (1 - progressFraction);
+    progressCircle.style.strokeDashoffset = dashOffset;
+    
+    // Custom label updates based on countdown phase
+    if (timeRemaining > 300) {
+      statusText.textContent = "Setting up Driver Stints...";
+    } else if (timeRemaining > 60) {
+      statusText.textContent = "Drivers in Cockpit...";
+    } else if (timeRemaining > 0) {
+      statusText.textContent = "Green Light Incoming!";
+      statusText.style.color = "#ff3d00";
+      statusText.style.textShadow = "0 0 10px rgba(255, 61, 0, 0.4)";
+      progressCircle.style.stroke = "#ff3d00";
+    } else {
+      statusText.textContent = "Session is Live!";
+      statusText.style.color = "#00e676";
+      statusText.style.textShadow = "0 0 10px rgba(0, 230, 118, 0.4)";
+      progressCircle.style.stroke = "#00e676";
+      clearInterval(timerInterval);
+    }
+  }
+
+  // Set initial circumference values
+  progressCircle.style.strokeDasharray = circumference;
+  progressCircle.style.strokeDashoffset = 0;
+
+  updateTimer();
+  
+  const timerInterval = setInterval(() => {
+    if (timeRemaining > 0) {
+      timeRemaining--;
+      updateTimer();
+    } else {
+      clearInterval(timerInterval);
+    }
+  }, 1000);
+</script>
+</body>
+</html>

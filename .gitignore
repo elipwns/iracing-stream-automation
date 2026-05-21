@@ -19,3 +19,5 @@ overlay/session_data.json
 
 # chat bot runtime data
 chat_bot.db
+
+scratch/

@@ -5,8 +5,98 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Race Results</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Animated background */
+    .bg-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 1;
+    }
+
+    .bg-image {
+      width: 100%;
+      height: 100%;
+      background: url('assets/end_screen_bg.png') no-repeat center center;
+      background-size: cover;
+      filter: brightness(0.4) contrast(1.05);
+      animation: scale-bg 25s infinite ease-in-out;
+    }
+
+    @keyframes scale-bg {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    /* Cyber scanlines overlay */
+    .scanlines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+      );
+      background-size: 100% 4px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .dark-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at center, transparent 35%, rgba(5, 7, 10, 0.75) 100%);
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Override main background to show animated backdrop */
+    main {
+      position: relative;
+      z-index: 3;
+      background: transparent !important;
+    }
+    
+    /* Ensure panels fit beautifully on top of glassmorphism backdrop */
+    .narrative-panel {
+      background: rgba(14, 18, 24, 0.75) !important;
+      backdrop-filter: var(--glass-blur);
+      border-right: 1px solid var(--border);
+    }
+    
+    .results-panel {
+      background: rgba(6, 8, 12, 0.45) !important;
+      backdrop-filter: var(--glass-blur);
+    }
+
+    /* Ensure text has high contrast */
+    .narrative-text {
+      background: rgba(0, 0, 0, 0.45) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    }
+
+    /* Make sure header & footer look premium on top */
+    header, footer {
+      position: relative;
+      z-index: 10;
+    }
+  </style>
 </head>
 <body>
+
+<div class="bg-wrapper">
+  <div class="bg-image"></div>
+</div>
+<div class="scanlines"></div>
+<div class="dark-overlay"></div>
 
 <header>
   <div>
@@ -37,6 +127,18 @@
       <div class="stat-card">
         <div class="stat-label">Incidents</div>
         <div class="stat-value" id="stat-incidents">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Distance Driven</div>
+        <div class="stat-value accent" id="stat-distance">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Car Odometer</div>
+        <div class="stat-value" id="stat-odometer">—</div>
+      </div>
+      <div class="stat-card" id="stat-ir-change-card">
+        <div class="stat-label">iRating Change</div>
+        <div class="stat-value" id="stat-ir-change">—</div>
       </div>
     </div>
   </div>
@@ -87,10 +189,43 @@
 
     if (myResult) {
       statsGrid.style.display = 'grid';
-      document.getElementById('stat-start').textContent = 'P' + myResult.start_position;
-      document.getElementById('stat-finish').textContent = 'P' + myResult.finish_position;
+      const startPos = myResult.start_position !== null && myResult.start_position !== undefined ? 'P' + myResult.start_position : '—';
+      const finishPos = myResult.finish_position !== null && myResult.finish_position !== undefined ? 'P' + myResult.finish_position : '—';
+      
+      document.getElementById('stat-start').textContent = startPos;
+      document.getElementById('stat-finish').textContent = finishPos;
       document.getElementById('stat-best-lap').textContent = myResult.best_lap_display || '—';
       document.getElementById('stat-incidents').textContent = myResult.incidents;
+
+      // Render post-race persistent odometer and iRating summary stats
+      const distance = data.session_miles !== undefined ? data.session_miles : 0.0;
+      const odometer = data.car_lifetime_miles !== undefined ? data.car_lifetime_miles : 0.0;
+      const irChange = data.predicted_ir_change !== undefined ? data.predicted_ir_change : 0;
+      
+      document.getElementById('stat-distance').textContent = `${distance.toFixed(1)} MI`;
+      document.getElementById('stat-odometer').textContent = `${odometer.toFixed(1)} MI`;
+      
+      const irSign = irChange >= 0 ? '+' : '';
+      const irValEl = document.getElementById('stat-ir-change');
+      irValEl.textContent = `${irSign}${irChange}`;
+      
+      const irCardEl = document.getElementById('stat-ir-change-card');
+      if (irChange > 0) {
+        irValEl.style.color = '#00e676';
+        irValEl.style.textShadow = '0 0 10px rgba(0, 230, 118, 0.5)';
+        irCardEl.style.borderColor = 'rgba(0, 230, 118, 0.3)';
+        irCardEl.style.background = 'rgba(0, 230, 118, 0.02)';
+      } else if (irChange < 0) {
+        irValEl.style.color = '#ff3d00';
+        irValEl.style.textShadow = '0 0 10px rgba(255, 61, 0, 0.5)';
+        irCardEl.style.borderColor = 'rgba(255, 61, 0, 0.3)';
+        irCardEl.style.background = 'rgba(255, 61, 0, 0.02)';
+      } else {
+        irValEl.style.color = '';
+        irValEl.style.textShadow = '';
+        irCardEl.style.borderColor = '';
+        irCardEl.style.background = '';
+      }
     }
 
     const tbody = document.getElementById('results-body');

@@ -8,6 +8,7 @@ _EMPTY = {
     "stream_date": "",
     "races": [],
     "session_narrative": "",
+    "video_ended": False,
     "totals": {
         "races_completed": 0,
         "by_category": {},
@@ -51,6 +52,12 @@ def add_race(race_entry: dict):
 def update_narrative(narrative: str):
     data = load()
     data["session_narrative"] = narrative
+    save(data)
+
+
+def update_video_ended(ended: bool):
+    data = load()
+    data["video_ended"] = ended
     save(data)
 
 

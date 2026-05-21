@@ -108,25 +108,18 @@ def _play_outro_and_exit(dry_run: bool):
     print("[monitor] iRacing closed — playing stream outro")
     _switch(SCENE_OUTRO, "idle", dry_run)
 
+    # Read duration (in seconds) from env, default to 60 seconds
+    try:
+        duration = int(os.getenv("OUTRO_DURATION", "60"))
+    except ValueError:
+        duration = 60
+
     if dry_run:
-        print("[dry-run] Would wait for outro video to finish, then exit")
+        print(f"[dry-run] Would display outro endcap for {duration}s, then exit")
         os._exit(0)
 
-    source = os.getenv("OUTRO_MEDIA_SOURCE", "")
-    if not source:
-        print("[monitor] OUTRO_MEDIA_SOURCE not set — exiting after 10s")
-        time.sleep(10)
-        os._exit(0)
-
-    print(f"[monitor] Waiting for '{source}' to finish...")
-    while True:
-        try:
-            state = obs_controller.get_media_state(source)
-            if state in ("OBS_MEDIA_STATE_ENDED", "OBS_MEDIA_STATE_NONE"):
-                break
-        except Exception:
-            break
-        time.sleep(1)
+    print(f"[monitor] Displaying stream recap endcap for {duration}s before stopping stream...")
+    time.sleep(duration)
 
     print("[monitor] Outro finished — stopping stream")
     try:
@@ -344,7 +337,7 @@ def monitor_loop(dry_run: bool):
                 current_lap = lap
                 betting.update_lap(lap)
 
-        if state in (5, 6) and not pipeline_fired:
+        if state in (5, 6) and not on_track and not pipeline_fired:
             pipeline_fired = True
             session_info_raw = ir["SessionInfo"] or {}
             sessions_list    = session_info_raw.get("Sessions") or []

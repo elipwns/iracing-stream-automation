@@ -4,72 +4,106 @@
   <meta charset="UTF-8">
   <title>Stream Recap</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@600;700;800;900&display=swap');
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg: #0a0c0f;
-      --surface: #12161c;
-      --border: #1e2530;
-      --accent: #00aaff;
-      --text: #e8edf2;
-      --text-muted: #6b7a8d;
-      --green: #00d26a;
-      --red: #ff5252;
-      --gold: #f5c842;
+      --bg: #05070a;
+      --surface: rgba(14, 18, 24, 0.65);
+      --border: rgba(255, 255, 255, 0.05);
+      --border-hover: rgba(0, 229, 255, 0.25);
+      
+      --accent: #00e5ff;
+      --accent-glow: rgba(0, 229, 255, 0.2);
+      
+      --text: #f0f4f8;
+      --text-muted: #8fa0b5;
+      
+      --green: #00e676;
+      --red: #ff3d00;
+      --gold: #ffc837;
+      --silver: #cfd8dc;
+      --bronze: #ff8a65;
+      
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'Orbitron', monospace;
+    }
+
+    /* Custom scrollbar for races list */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 229, 255, 0.2);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--accent);
     }
 
     body {
       background: transparent;
       color: var(--text);
-      font-family: 'Segoe UI', system-ui, sans-serif;
+      font-family: var(--font-sans);
       height: 100vh;
       display: flex;
       overflow: hidden;
+      letter-spacing: -0.01em;
     }
 
-    /* Left panel — recap content */
+    /* Left panel — glassmorphic recap slide-out */
     .panel {
-      width: 560px;
+      width: 580px;
       flex-shrink: 0;
       display: flex;
       flex-direction: column;
-      background: rgba(10, 12, 15, 0.92);
-      border-right: 2px solid var(--accent);
+      background: rgba(8, 11, 16, 0.88);
+      backdrop-filter: blur(18px);
+      border-right: 2.5px solid var(--accent);
+      box-shadow: 10px 0 40px rgba(0, 0, 0, 0.6);
       height: 100vh;
+      z-index: 5;
     }
 
     /* Right side — fully transparent, game capture shows through */
     .game-area {
       flex: 1;
-      /* intentionally empty */
     }
 
     header {
-      background: var(--surface);
+      background: rgba(14, 18, 24, 0.8);
       border-bottom: 1px solid var(--border);
-      padding: 14px 20px;
+      padding: 18px 24px;
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
 
     .header-eyebrow {
-      font-size: 9px;
+      font-family: var(--font-mono);
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       text-transform: uppercase;
       color: var(--accent);
+      text-shadow: 0 0 6px var(--accent-glow);
     }
 
     .header-title {
-      font-size: 18px;
-      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
     }
 
     .header-date {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--text-muted);
-      margin-top: 1px;
+      margin-top: 2px;
     }
 
     .body {
@@ -77,67 +111,83 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      padding: 16px 20px;
-      gap: 14px;
+      padding: 20px 24px;
+      gap: 16px;
     }
 
     /* Top summary row */
     .summary-row {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
     }
 
     .total-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
+      border-radius: 8px;
+      padding: 12px 16px;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .total-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-1px);
     }
 
     .total-label {
       font-size: 9px;
       font-weight: 700;
-      letter-spacing: 2.5px;
+      letter-spacing: 2px;
       text-transform: uppercase;
       color: var(--text-muted);
     }
 
     .total-value {
-      font-size: 20px;
-      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 800;
     }
 
-    .total-value.positive { color: var(--green); }
-    .total-value.negative { color: var(--red); }
+    .total-value.positive { color: var(--green); text-shadow: 0 0 8px rgba(0, 230, 118, 0.25); }
+    .total-value.negative { color: var(--red); text-shadow: 0 0 8px rgba(255, 61, 0, 0.25); }
     .total-value.neutral  { color: var(--text); }
-    .total-value.accent   { color: var(--accent); }
-    .total-value.gold     { color: var(--gold); }
+    .total-value.accent   { color: var(--accent); text-shadow: 0 0 8px rgba(0, 229, 255, 0.25); }
+    .total-value.gold     { color: var(--gold); text-shadow: 0 0 8px rgba(255, 200, 55, 0.25); }
 
     /* Per-discipline cards */
     .category-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
+      border-radius: 8px;
+      padding: 12px 16px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .category-card:hover {
+      border-color: var(--border-hover);
     }
 
     .category-name {
+      font-family: var(--font-mono);
       font-size: 10px;
       font-weight: 700;
-      letter-spacing: 2px;
+      letter-spacing: 2.5px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
+      text-shadow: 0 0 6px var(--accent-glow);
+      margin-bottom: 10px;
     }
 
     .category-stats {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 8px;
+      gap: 10px;
     }
 
     .cat-stat-label {
@@ -146,10 +196,11 @@
       letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 2px;
+      margin-bottom: 4px;
     }
 
     .cat-stat-value {
+      font-family: var(--font-mono);
       font-size: 18px;
       font-weight: 700;
     }
@@ -158,38 +209,50 @@
     .races-section {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
       overflow-y: auto;
+      padding-right: 4px;
     }
 
     .race-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
+      border-radius: 8px;
+      padding: 12px 16px;
       display: grid;
-      grid-template-columns: 48px 1fr auto auto auto auto auto;
+      grid-template-columns: 50px 1fr 64px 64px;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .race-card:hover {
+      border-color: var(--border-hover);
+      background: rgba(255, 255, 255, 0.02);
     }
 
     .race-pos {
-      font-size: 24px;
+      font-family: var(--font-mono);
+      font-size: 22px;
       font-weight: 900;
       text-align: center;
       line-height: 1;
     }
 
-    .race-pos.p1 { color: var(--gold); }
-    .race-pos.p2 { color: #b0bec5; }
-    .race-pos.p3 { color: #cd7f32; }
+    .race-pos.p1 { color: var(--gold); text-shadow: 0 0 10px rgba(255, 200, 55, 0.4); }
+    .race-pos.p2 { color: var(--silver); text-shadow: 0 0 10px rgba(207, 216, 220, 0.3); }
+    .race-pos.p3 { color: var(--bronze); text-shadow: 0 0 10px rgba(255, 138, 101, 0.3); }
     .race-pos.other { color: var(--text); }
 
     .race-info { min-width: 0; }
 
     .race-track {
-      font-size: 15px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
+      color: #f0f4f8;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -198,25 +261,29 @@
     .race-meta {
       font-size: 11px;
       color: var(--text-muted);
-      margin-top: 2px;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .race-stat {
       text-align: center;
-      min-width: 64px;
+      min-width: 60px;
     }
 
     .race-stat-label {
       font-size: 9px;
       font-weight: 700;
-      letter-spacing: 2px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
       color: var(--text-muted);
-      margin-bottom: 3px;
+      margin-bottom: 4px;
     }
 
     .race-stat-value {
-      font-size: 16px;
+      font-family: var(--font-mono);
+      font-size: 14px;
       font-weight: 700;
     }
 
@@ -224,12 +291,22 @@
     .negative { color: var(--red); }
 
     .pending-badge {
-      font-size: 10px;
-      background: var(--border);
-      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 800;
+      background: rgba(0, 229, 255, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(0, 229, 255, 0.3);
       border-radius: 4px;
-      padding: 2px 8px;
-      letter-spacing: 1px;
+      padding: 1px 6px;
+      letter-spacing: 1.5px;
+      text-align: center;
+      animation: flash-badge 2s infinite ease-in-out;
+    }
+
+    @keyframes flash-badge {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
     }
 
     /* Narrative panel */
@@ -239,20 +316,23 @@
       border-left: 3px solid var(--accent);
       border-radius: 8px;
       padding: 16px 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
 
     .narrative-label {
-      font-size: 9px;
+      font-family: var(--font-mono);
+      font-size: 10px;
       font-weight: 700;
-      letter-spacing: 2.5px;
+      letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
+      text-shadow: 0 0 6px var(--accent-glow);
+      margin-bottom: 10px;
     }
 
     .narrative-text {
-      font-size: 13px;
-      line-height: 1.65;
+      font-size: 13.5px;
+      line-height: 1.7;
       color: var(--text);
     }
 
@@ -262,15 +342,21 @@
     }
 
     footer {
-      background: var(--surface);
+      background: rgba(14, 18, 24, 0.85);
       border-top: 1px solid var(--border);
-      padding: 8px 36px;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
-    .footer-text { font-size: 11px; color: var(--text-muted); }
+    .footer-text { 
+      font-size: 11px; 
+      color: var(--text-muted); 
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
   </style>
 </head>
 <body>
@@ -295,8 +381,8 @@
       <div class="total-value gold" id="total-best">—</div>
     </div>
     <div class="total-card">
-      <div class="total-label">Champ Points</div>
-      <div class="total-value accent" id="total-pts">—</div>
+      <div class="total-label">Laps Completed</div>
+      <div class="total-value accent" id="total-laps">—</div>
     </div>
   </div>
 
@@ -339,11 +425,14 @@
 
   function render(data) {
     const t = data.totals || {};
+    const races = data.races || [];
 
     document.getElementById('header-date').textContent = data.stream_date || '';
     document.getElementById('total-races').textContent = t.races_completed ?? '—';
     document.getElementById('total-best').textContent  = t.best_finish ? `P${t.best_finish}` : '—';
-    document.getElementById('total-pts').textContent   = t.total_champ_points ?? '—';
+    
+    const totalLaps = races.reduce((sum, r) => sum + (r.laps || 0), 0);
+    document.getElementById('total-laps').textContent  = totalLaps;
 
     const byCategory = t.by_category || {};
     const catEl = document.getElementById('categories');
@@ -383,33 +472,21 @@
 
     for (const r of races) {
       const pos = r.finish_position;
-      const irChg = r.iracing_change;
-      const srChg = r.safety_rating_change;
-      const pending = !r.official;
 
       html += `<div class="race-card">
         <div class="race-pos ${posClass(pos)}">${pos ? 'P' + pos : '—'}</div>
         <div class="race-info">
           <div class="race-track">${r.track || 'Unknown Track'}</div>
-          <div class="race-meta">${r.category ? r.category + ' · ' : ''}${r.series_name || ''}${r.laps ? ' · ' + r.laps + ' laps' : ''}${r.total_drivers ? ' · ' + r.total_drivers + ' drivers' : ''}</div>
+          <div class="race-meta">${r.category ? r.category + ' · ' : ''}${r.series_name || ''}${r.total_drivers ? ' · ' + r.total_drivers + ' drivers' : ''}</div>
         </div>
         <div class="race-stat">
-          <div class="race-stat-label">iRating</div>
-          <div class="race-stat-value ${signClass(irChg)}">${pending ? '—' : signStr(irChg)}</div>
+          <div class="race-stat-label">Laps</div>
+          <div class="race-stat-value">${r.laps ?? '—'}</div>
         </div>
         <div class="race-stat">
-          <div class="race-stat-label">SR</div>
-          <div class="race-stat-value ${signClass(srChg)}">${pending ? '—' : signStr(srChg, 2)}</div>
-        </div>
-        <div class="race-stat">
-          <div class="race-stat-label">Points</div>
-          <div class="race-stat-value">${r.champ_points ?? '—'}</div>
-        </div>
-        <div class="race-stat">
-          <div class="race-stat-label">Inc</div>
+          <div class="race-stat-label">Incidents</div>
           <div class="race-stat-value ${r.incidents > 0 ? 'negative' : ''}">${r.incidents ?? '—'}x</div>
         </div>
-        ${pending ? '<span class="pending-badge">PENDING</span>' : ''}
       </div>`;
     }
 
