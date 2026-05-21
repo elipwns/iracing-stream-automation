@@ -23,6 +23,11 @@ _session_meters = 0.0
 _active_car_path = "unknown"
 _active_car_name = "Unknown Car"
 
+# Team Endurance State
+_stint_laps = 0
+_driver_laps = {}
+_current_driver = None
+
 
 def _load_mileage():
     global _mileage_data
@@ -149,6 +154,8 @@ def _build_cars(ir, player_idx: int, drivers: list[dict], rolling_avg: float | N
             "name":      drv.get("UserName", ""),
             "car_num":   drv.get("CarNumber", ""),
             "class_id":  cls,
+            "class_name": drv.get("CarClassShortName", str(cls)),
+            "class_speed": drv.get("CarClassRelSpeed", 0),
             "position":  pos,
             "lap_pct":   round(pct, 4),
             "is_player": i == player_idx,
@@ -228,6 +235,7 @@ def _predict_ir_change(ir, player_idx: int, drivers: list[dict]) -> int:
 
 def _polling_thread():
     global _session_meters, _active_car_path, _active_car_name
+    global _stint_laps, _driver_laps, _current_driver
     ir = irsdk.IRSDK()
     lap_times: list[float] = []
     last_lap = -1
@@ -279,12 +287,24 @@ def _polling_thread():
             p_driver = drivers[player_idx]
             _active_car_path = p_driver.get("CarPath", "unknown").strip("/")
             _active_car_name = p_driver.get("CarScreenName", "Unknown Car")
+            
+            active_driver_name = p_driver.get("UserName", "Unknown")
+            if _current_driver != active_driver_name:
+                print(f"[telemetry] Driver swap detected: {_current_driver} -> {active_driver_name}")
+                _current_driver = active_driver_name
+                _stint_laps = 0
+                if active_driver_name not in _driver_laps:
+                    _driver_laps[active_driver_name] = 0
 
         if current_lap != last_lap and last_lap_t > 0:
             lap_times.append(last_lap_t)
             if len(lap_times) > 20:
                 lap_times.pop(0)
             last_lap = current_lap
+            
+            if _current_driver is not None:
+                _stint_laps += 1
+                _driver_laps[_current_driver] = _driver_laps.get(_current_driver, 0) + 1
 
         recent = lap_times[-3:] if len(lap_times) >= 3 else lap_times
         rolling_avg = sum(recent) / len(recent) if recent else None
@@ -293,6 +313,17 @@ def _polling_thread():
         cars     = _build_cars(ir, player_idx, drivers, rolling_avg)
 
         player_car = next((c for c in cars if c["is_player"]), {})
+
+        # Compute traffic radar
+        player_class_speed = player_car.get("class_speed", 0)
+        traffic_radar = []
+        for c in cars:
+            if c["is_player"]: continue
+            if c["class_speed"] > player_class_speed:
+                if c["gap_secs"] is not None and c["gap_secs"] < 0 and c["gap_secs"] > -15.0:
+                    traffic_radar.append(c)
+        # Sort so the closest car behind us is first (e.g. -1.5 is before -10.0)
+        traffic_radar.sort(key=lambda x: x["gap_secs"], reverse=True)
 
         # Compute persistent odometer and iRating metrics
         session_miles = _session_meters * 0.000621371
@@ -308,6 +339,17 @@ def _polling_thread():
         
         predicted_ir_change = _predict_ir_change(ir, player_idx, drivers)
         player_starting_ir = p_driver.get("IRating", 1350) or 1350
+        
+        # Calculate Team Lap Percentages
+        total_team_laps = sum(_driver_laps.values())
+        team_laps_info = []
+        for driver_name, laps in _driver_laps.items():
+            pct = (laps / total_team_laps * 100.0) if total_team_laps > 0 else 0.0
+            team_laps_info.append({
+                "name": driver_name,
+                "laps": laps,
+                "pct": round(pct, 1)
+            })
 
         payload = {
             "connected":    True,
@@ -318,6 +360,13 @@ def _polling_thread():
             "player_car":   player_car,
             "strategy":     strategy,
             "cars":         cars,
+            "traffic_radar": traffic_radar,
+            "team_stint": {
+                "active_driver": _current_driver,
+                "stint_laps": _stint_laps,
+                "driver_laps": team_laps_info,
+                "total_team_laps": total_team_laps
+            },
             "ts":           time.time(),
             
             # Odometer and iRating predictor details

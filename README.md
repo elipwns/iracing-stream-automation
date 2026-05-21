@@ -138,7 +138,7 @@ All overlays are plain HTML files served as OBS browser sources. They poll local
 - **`overlay/recap.html`** — Full-session recap. Polls `session_data.json` every 8 seconds. Shows all races from the current stream session with per-category iRating tracking.
 - **`overlay/lobby.html`** — Lobby background & stats ticker. Provides a 1920x1080 premium sci-fi grid backdrop to sit behind windowed captures, plus a glassmorphic bottom bar featuring a live clock and dynamic scrolling telemetry marquee (active car, trip, total miles, and predicted iRating).
 - **`overlay/odometer.html`** — Odometer & Live Stats HUD. Connects to the WebSocket server and shows active car name, lifetime odometer, session trip, predicted iRating, and session status.
-- **`overlay/pitwall.html`** — Crew chief view. Track map, strategy panel (pace delta, fuel, repair estimate, pit recommendation), and mini relative strip.
+- **`overlay/pitwall.html`** — Crew chief view. Track map, strategy panel (pace delta, fuel, repair estimate, pit recommendation), mini relative strip, and team endurance stats (live active driver/stint tracking and a multiclass traffic radar approach scanner).
 
 ---
 

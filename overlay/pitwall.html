@@ -269,6 +269,33 @@
     </div>
   </div>
 
+  <!-- team endurance stats -->
+  <div class="card" id="team-card" style="display:none">
+    <div class="card-title">Driver & Stint Status</div>
+    <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <div class="strat-label" style="margin:0;">Active Driver</div>
+      <div class="strat-value" id="t-active-driver" style="font-size: 14px; color: #00e5ff;">—</div>
+    </div>
+    <div class="strat-grid">
+      <div class="strat-cell">
+        <div class="strat-label">Current Stint</div>
+        <div class="strat-value" id="t-stint-laps">—</div>
+      </div>
+      <div class="strat-cell" id="t-fair-share-cell">
+        <div class="strat-label">Team Laps</div>
+        <div class="strat-value" id="t-total-laps">—</div>
+      </div>
+    </div>
+    <div id="t-driver-breakdown" style="margin-top: 10px; font-size: 10px; color: #8fa0b5; display:flex; flex-direction:column; gap:4px;">
+    </div>
+  </div>
+
+  <!-- traffic radar -->
+  <div class="card" id="radar-card" style="display:none">
+    <div class="card-title" style="color: #ff3d00; text-shadow: 0 0 8px rgba(255,61,0,0.3); border-bottom-color: rgba(255,61,0,0.2);">Traffic Radar</div>
+    <div id="radar-strip"></div>
+  </div>
+
   <!-- relative timing -->
   <div class="card" id="rel-card" style="display:none">
     <div class="card-title">Relative ±30s</div>
@@ -389,10 +416,13 @@ function render(data) {
   const mapCard   = document.getElementById('map-card');
   const stratCard = document.getElementById('strat-card');
   const relCard   = document.getElementById('rel-card');
+  const teamCard  = document.getElementById('team-card');
+  const radarCard = document.getElementById('radar-card');
 
   if (!data || !data.connected) {
     disco.style.display = 'block';
     mapCard.style.display = stratCard.style.display = relCard.style.display = 'none';
+    teamCard.style.display = radarCard.style.display = 'none';
     return;
   }
   disco.style.display = 'none';
@@ -428,6 +458,76 @@ function render(data) {
   document.getElementById('s-fuel').textContent   = st.fuel_laps != null ? `${st.fuel_laps} laps` : '—';
   document.getElementById('s-repair').textContent = st.pit_repair_secs > 0 ? `${st.pit_repair_secs}s` : 'None';
   document.getElementById('s-time').textContent   = fmtTime(st.session_time_remain);
+
+  // team endurance
+  const ts = data.team_stint;
+  if (ts && ts.total_team_laps > 0) {
+    teamCard.style.display = '';
+    document.getElementById('t-active-driver').textContent = firstName(ts.active_driver) || '—';
+    document.getElementById('t-stint-laps').textContent = ts.stint_laps;
+    document.getElementById('t-total-laps').textContent = ts.total_team_laps;
+    
+    const db = document.getElementById('t-driver-breakdown');
+    db.innerHTML = '';
+    for (const d of ts.driver_laps) {
+      const drvRow = document.createElement('div');
+      drvRow.style.display = 'flex';
+      drvRow.style.justifyContent = 'space-between';
+      drvRow.innerHTML = `<span>${firstName(d.name)}</span><span>${d.laps} L (${d.pct}%)</span>`;
+      if (d.name === ts.active_driver) drvRow.style.color = '#e8edf2';
+      db.appendChild(drvRow);
+    }
+  } else {
+    teamCard.style.display = 'none';
+  }
+
+  // traffic radar
+  const radarStrip = document.getElementById('radar-strip');
+  if (data.traffic_radar && data.traffic_radar.length > 0) {
+    radarCard.style.display = '';
+    radarStrip.innerHTML = '';
+    for (const car of data.traffic_radar) {
+      const row = document.createElement('div');
+      row.className = 'mini-row';
+      row.style.borderColor = 'rgba(255, 61, 0, 0.3)';
+      row.style.background = 'rgba(255, 61, 0, 0.05)';
+
+      const pos = document.createElement('div');
+      pos.className = 'mini-pos';
+      pos.textContent = car.class_name || '';
+
+      const nameWrap = document.createElement('div');
+      nameWrap.style.display = 'flex';
+      nameWrap.style.alignItems = 'center';
+      nameWrap.style.overflow = 'hidden';
+
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      const clr = classColor(car.class_id);
+      dot.style.background = clr;
+      dot.style.boxShadow = `0 0 6px ${clr}`;
+
+      const name = document.createElement('div');
+      name.className = 'mini-name';
+      name.textContent = firstName(car.name);
+
+      nameWrap.appendChild(dot);
+      nameWrap.appendChild(name);
+
+      const gap = document.createElement('div');
+      gap.className = 'mini-gap';
+      gap.textContent = car.gap_str;
+      gap.style.color = '#ff3d00';
+      gap.style.textShadow = '0 0 8px rgba(255, 61, 0, 0.3)';
+
+      row.appendChild(pos);
+      row.appendChild(nameWrap);
+      row.appendChild(gap);
+      radarStrip.appendChild(row);
+    }
+  } else {
+    radarCard.style.display = 'none';
+  }
 
   // mini relative
   const strip = document.getElementById('mini-strip');
@@ -482,6 +582,8 @@ function connect() {
     document.getElementById('map-card').style.display = 'none';
     document.getElementById('strat-card').style.display = 'none';
     document.getElementById('rel-card').style.display = 'none';
+    document.getElementById('team-card').style.display = 'none';
+    document.getElementById('radar-card').style.display = 'none';
     setTimeout(connect, 3000);
   };
   ws.onerror   = () => ws.close();
